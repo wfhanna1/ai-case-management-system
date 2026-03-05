@@ -10,6 +10,8 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FolderIcon from '@mui/icons-material/Folder';
 import RateReviewIcon from '@mui/icons-material/RateReview';
+import SearchIcon from '@mui/icons-material/Search';
+import WorkIcon from '@mui/icons-material/Work';
 import useAuthStore from '@/stores/authStore';
 
 function MainLayout() {
@@ -42,6 +44,12 @@ function MainLayout() {
               </Button>
               <Button color="inherit" onClick={() => navigate('/templates')} sx={{ mr: 1 }}>
                 Templates
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/search')} sx={{ mr: 1 }} startIcon={<SearchIcon />}>
+                Search
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/cases')} sx={{ mr: 1 }} startIcon={<WorkIcon />}>
+                Cases
               </Button>
               {(user.roles.includes('Reviewer') || user.roles.includes('Admin')) && (
                 <Button color="inherit" onClick={() => navigate('/reviews')} sx={{ mr: 2 }} startIcon={<RateReviewIcon />}>

@@ -144,6 +144,7 @@ builder.Services.AddDbContext<IntakeDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddTransient<IDocumentRepository, EfDocumentRepository>();
+builder.Services.AddTransient<ICaseRepository, EfCaseRepository>();
 builder.Services.AddTransient<IFormTemplateRepository, EfFormTemplateRepository>();
 builder.Services.AddTransient<IUserRepository, EfUserRepository>();
 builder.Services.AddTransient<IAuditLogRepository, EfAuditLogRepository>();
@@ -174,6 +175,11 @@ builder.Services.AddTransient<StartReviewHandler>();
 builder.Services.AddTransient<CorrectFieldHandler>();
 builder.Services.AddTransient<FinalizeReviewHandler>();
 builder.Services.AddTransient<GetAuditTrailHandler>();
+builder.Services.AddTransient<SearchDocumentsHandler>();
+builder.Services.AddTransient<ListCasesHandler>();
+builder.Services.AddTransient<GetCaseByIdHandler>();
+builder.Services.AddTransient<SearchCasesHandler>();
+builder.Services.AddTransient<AssignDocumentToCaseHandler>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)

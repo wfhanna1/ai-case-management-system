@@ -14,6 +14,7 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
     public DocumentStatus Status { get; private set; }
     public DateTimeOffset SubmittedAt { get; private set; }
     public DateTimeOffset? ProcessedAt { get; private set; }
+    public CaseId? CaseId { get; private set; }
     public UserId? ReviewedBy { get; private set; }
     public DateTimeOffset? ReviewedAt { get; private set; }
 
@@ -161,6 +162,12 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
         ReviewedBy ??= reviewerId;
         ReviewedAt = DateTimeOffset.UtcNow;
         return Result<Unit>.Success(Unit.Value);
+    }
+
+    public void AssignToCase(CaseId caseId)
+    {
+        ArgumentNullException.ThrowIfNull(caseId);
+        CaseId = caseId;
     }
 
     /// <summary>

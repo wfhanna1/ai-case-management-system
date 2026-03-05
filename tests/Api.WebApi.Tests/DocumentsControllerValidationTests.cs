@@ -21,6 +21,7 @@ public sealed class DocumentsControllerValidationTests
             new SubmitDocumentHandler(null!, null!, null!, NullLogger<SubmitDocumentHandler>.Instance),
             new GetDocumentByIdHandler(null!),
             new ListDocumentsByTenantHandler(null!),
+            new SearchDocumentsHandler(null!),
             tenantContext);
     }
 

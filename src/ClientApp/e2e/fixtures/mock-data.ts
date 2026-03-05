@@ -129,6 +129,93 @@ export function createFormTemplateDto(overrides: Partial<FormTemplateDto> = {}):
   };
 }
 
+export interface CaseDto {
+  id: string;
+  tenantId: string;
+  subjectName: string;
+  createdAt: string;
+  updatedAt: string;
+  documentCount: number;
+}
+
+export interface CaseDetailDto {
+  id: string;
+  tenantId: string;
+  subjectName: string;
+  createdAt: string;
+  updatedAt: string;
+  documents: DocumentDto[];
+}
+
+export interface SearchDocumentsResultDto {
+  items: DocumentDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SearchCasesResultDto {
+  items: CaseDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export function createCaseDto(overrides: Partial<CaseDto> = {}): CaseDto {
+  return {
+    id: nextId(),
+    tenantId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    subjectName: 'John Doe',
+    createdAt: '2026-03-01T10:00:00Z',
+    updatedAt: '2026-03-01T10:05:00Z',
+    documentCount: 2,
+    ...overrides,
+  };
+}
+
+export function createCaseDetailDto(overrides: Partial<CaseDetailDto> = {}): CaseDetailDto {
+  return {
+    id: nextId(),
+    tenantId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    subjectName: 'John Doe',
+    createdAt: '2026-03-01T10:00:00Z',
+    updatedAt: '2026-03-01T10:05:00Z',
+    documents: [
+      createDocumentDto({ status: 'PendingReview', processedAt: '2026-03-01T10:01:00Z' }),
+      createDocumentDto({ originalFileName: 'follow-up.pdf', status: 'Finalized', processedAt: '2026-03-01T10:02:00Z' }),
+    ],
+    ...overrides,
+  };
+}
+
+export function createSearchDocumentsResultDto(
+  items: DocumentDto[] = [],
+  totalCount?: number,
+  page = 1,
+  pageSize = 20
+): SearchDocumentsResultDto {
+  return {
+    items,
+    totalCount: totalCount ?? items.length,
+    page,
+    pageSize,
+  };
+}
+
+export function createSearchCasesResultDto(
+  items: CaseDto[] = [],
+  totalCount?: number,
+  page = 1,
+  pageSize = 20
+): SearchCasesResultDto {
+  return {
+    items,
+    totalCount: totalCount ?? items.length,
+    page,
+    pageSize,
+  };
+}
+
 export function apiOk<T>(data: T) {
   return { data, error: null };
 }

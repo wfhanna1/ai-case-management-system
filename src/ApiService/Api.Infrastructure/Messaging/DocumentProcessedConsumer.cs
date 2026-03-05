@@ -1,3 +1,4 @@
+using Api.Application.Commands;
 using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using MassTransit;
@@ -17,15 +18,18 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
 {
     private readonly IDocumentRepository _repository;
     private readonly IAuditLogRepository _auditLogRepository;
+    private readonly AssignDocumentToCaseHandler _assignToCaseHandler;
     private readonly ILogger<DocumentProcessedConsumer> _logger;
 
     public DocumentProcessedConsumer(
         IDocumentRepository repository,
         IAuditLogRepository auditLogRepository,
+        AssignDocumentToCaseHandler assignToCaseHandler,
         ILogger<DocumentProcessedConsumer> logger)
     {
         _repository = repository;
         _auditLogRepository = auditLogRepository;
+        _assignToCaseHandler = assignToCaseHandler;
         _logger = logger;
     }
 
@@ -102,6 +106,19 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
                 pendingReviewResult.Error.Message);
         }
 
+        // Attempt to assign the document to a case based on extracted name fields.
+        // This mutates the in-memory entity before the single save below.
+        var tenantId = new TenantId(message.TenantId);
+        var documentId = new DocumentId(message.DocumentId);
+        var assignResult = await _assignToCaseHandler.HandleAsync(
+            documentId, tenantId, context.CancellationToken);
+        if (assignResult.IsFailure)
+        {
+            _logger.LogWarning(
+                "Case assignment failed for document {DocumentId}: {Error}. Document is still PendingReview.",
+                message.DocumentId, assignResult.Error.Message);
+        }
+
         var saveResult = await _repository.UpdateAsync(document, context.CancellationToken);
         if (saveResult.IsFailure)
         {
@@ -110,8 +127,6 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
         }
 
         // Record audit entry for extraction completion.
-        var tenantId = new TenantId(message.TenantId);
-        var documentId = new DocumentId(message.DocumentId);
         var auditEntry = AuditLogEntry.RecordExtractionCompleted(tenantId, documentId);
         var auditResult = await _auditLogRepository.SaveAsync(auditEntry, context.CancellationToken);
         if (auditResult.IsFailure)

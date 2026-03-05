@@ -140,6 +140,60 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
     }
 
+    public async Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> SearchAsync(
+        TenantId tenantId, string? fileNameContains, DocumentStatus? status,
+        DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore,
+        string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default)
+    {
+        try
+        {
+            var query = _db.Documents
+                .Where(d => d.TenantId == tenantId);
+
+            if (!string.IsNullOrWhiteSpace(fileNameContains))
+            {
+                var escaped = EscapeLikePattern(fileNameContains);
+                query = query.Where(d => EF.Functions.ILike(d.OriginalFileName, $"%{escaped}%", "\\"));
+            }
+
+            if (status.HasValue)
+                query = query.Where(d => d.Status == status.Value);
+
+            if (submittedAfter.HasValue)
+                query = query.Where(d => d.SubmittedAt >= submittedAfter.Value);
+
+            if (submittedBefore.HasValue)
+                query = query.Where(d => d.SubmittedAt <= submittedBefore.Value);
+
+            if (!string.IsNullOrWhiteSpace(extractedFieldContains))
+            {
+                var escaped = EscapeLikePattern(extractedFieldContains);
+                query = query.Where(d =>
+                    d.ExtractedFields.Any(f =>
+                        EF.Functions.ILike(f.Value, $"%{escaped}%", "\\") ||
+                        (f.CorrectedValue != null && EF.Functions.ILike(f.CorrectedValue, $"%{escaped}%", "\\"))));
+            }
+
+            var totalCount = await query.CountAsync(ct);
+
+            var items = await query
+                .OrderByDescending(d => d.SubmittedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return Result<(IReadOnlyList<IntakeDocument>, int)>.Success((items, totalCount));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to search documents for tenant {TenantId}", tenantId.Value);
+            return Result<(IReadOnlyList<IntakeDocument>, int)>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
+    private static string EscapeLikePattern(string input) =>
+        input.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+
     public async Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default)
     {
         try

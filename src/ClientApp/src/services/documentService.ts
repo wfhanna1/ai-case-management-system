@@ -55,3 +55,31 @@ export async function getDocument(id: string): Promise<DocumentDto> {
   }
   return res.data.data;
 }
+
+export interface SearchDocumentsParams {
+  fileName?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  fieldValue?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface SearchDocumentsResult {
+  items: DocumentDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function searchDocuments(params: SearchDocumentsParams): Promise<SearchDocumentsResult> {
+  const res = await api.get<ApiResponse<SearchDocumentsResult>>('/documents/search', { params });
+  if (res.data.error) {
+    throw new Error(res.data.error.message);
+  }
+  if (!res.data.data) {
+    throw new Error('No search results');
+  }
+  return res.data.data;
+}

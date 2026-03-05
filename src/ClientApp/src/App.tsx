@@ -10,6 +10,9 @@ import UploadPage from '@/pages/UploadPage';
 import DocumentsPage from '@/pages/DocumentsPage';
 import ReviewQueuePage from '@/pages/ReviewQueuePage';
 import ReviewDetailPage from '@/pages/ReviewDetailPage';
+import SearchPage from '@/pages/SearchPage';
+import CasesPage from '@/pages/CasesPage';
+import CaseDetailPage from '@/pages/CaseDetailPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 function App() {
@@ -56,6 +59,30 @@ function App() {
           element={
             <ProtectedRoute>
               <DocumentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRoute>
+              <SearchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases"
+          element={
+            <ProtectedRoute>
+              <CasesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:id"
+          element={
+            <ProtectedRoute>
+              <CaseDetailPage />
             </ProtectedRoute>
           }
         />

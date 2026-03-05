@@ -1,3 +1,4 @@
+using Api.Application.Commands;
 using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using Api.Infrastructure.Messaging;
@@ -31,6 +32,8 @@ public sealed class DocumentProcessedConsumerTests
                 opts.UseInMemoryDatabase(dbName))
             .AddScoped<IDocumentRepository, EfDocumentRepository>()
             .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
+            .AddScoped<ICaseRepository, StubCaseRepository>()
+            .AddScoped<AssignDocumentToCaseHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -100,6 +103,8 @@ public sealed class DocumentProcessedConsumerTests
                 opts.UseInMemoryDatabase(dbName))
             .AddScoped<IDocumentRepository, EfDocumentRepository>()
             .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
+            .AddScoped<ICaseRepository, StubCaseRepository>()
+            .AddScoped<AssignDocumentToCaseHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -149,6 +154,32 @@ public sealed class DocumentProcessedConsumerTests
         {
             await harness.Stop();
         }
+    }
+
+    private sealed class StubCaseRepository : ICaseRepository
+    {
+        private readonly List<Case> _cases = [];
+
+        public Task<Result<Case?>> FindByIdAsync(CaseId id, TenantId tenantId, CancellationToken ct = default)
+            => Task.FromResult(Result<Case?>.Success(_cases.FirstOrDefault(c => c.Id == id && c.TenantId == tenantId)));
+
+        public Task<Result<Case?>> FindBySubjectNameAsync(string subjectName, TenantId tenantId, CancellationToken ct = default)
+            => Task.FromResult(Result<Case?>.Success(_cases.FirstOrDefault(c => c.SubjectName == subjectName && c.TenantId == tenantId)));
+
+        public Task<Result<(IReadOnlyList<Case> Items, int TotalCount)>> ListByTenantAsync(TenantId tenantId, int page, int pageSize, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Result<(IReadOnlyList<Case> Items, int TotalCount)>> SearchAsync(TenantId tenantId, string? query, DocumentStatus? status, DateTimeOffset? from, DateTimeOffset? to, int page, int pageSize, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Result<Unit>> SaveAsync(Case @case, CancellationToken ct = default)
+        {
+            _cases.Add(@case);
+            return Task.FromResult(Result<Unit>.Success(Unit.Value));
+        }
+
+        public Task<Result<Unit>> UpdateAsync(Case @case, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit>.Success(Unit.Value));
     }
 
     private sealed class StubAuditLogRepository : IAuditLogRepository
