@@ -11,31 +11,42 @@ import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
 import useAuthStore from '@/stores/authStore';
-import { login, DEMO_TENANTS } from '@/services/authService';
+import { register, DEMO_TENANTS } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
 
-function LoginPage() {
+const AVAILABLE_ROLES = ['IntakeWorker', 'Reviewer', 'Admin'];
+
+function RegisterPage() {
   const navigate = useNavigate();
-  const { setAuth, isAuthenticated } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [tenantId, setTenantId] = useState(DEMO_TENANTS[0].id);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('IntakeWorker');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  if (isAuthenticated) {
-    navigate('/dashboard', { replace: true });
-  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await login({ tenantId, email, password });
+      const res = await register({ tenantId, email, password, roles: [role] });
       if (!res.success) {
-        setError(res.error?.message ?? 'Login failed');
+        setError(res.error?.message ?? 'Registration failed');
         return;
       }
       const claims = parseJwt(res.data.accessToken);
@@ -69,7 +80,7 @@ function LoginPage() {
       >
         <Paper sx={{ p: 4, width: '100%' }} elevation={2}>
           <Typography variant="h5" component="h1" gutterBottom fontWeight={700} align="center">
-            Sign In
+            Create Account
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
             Intake Document Processor
@@ -105,33 +116,54 @@ function LoginPage() {
               autoFocus
               value={email}
               onChange={e => setEmail(e.target.value)}
-              inputProps={{ 'aria-label': 'email address' }}
             />
             <TextField
               label="Password"
               type="password"
               fullWidth
               margin="normal"
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              inputProps={{ 'aria-label': 'password' }}
             />
+            <TextField
+              label="Confirm Password"
+              type="password"
+              fullWidth
+              margin="normal"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+            />
+            <TextField
+              select
+              label="Role"
+              value={role}
+              onChange={e => setRole(e.target.value)}
+              fullWidth
+              margin="normal"
+            >
+              {AVAILABLE_ROLES.map(r => (
+                <MenuItem key={r} value={r}>
+                  {r}
+                </MenuItem>
+              ))}
+            </TextField>
             <Button
               type="submit"
               variant="contained"
               fullWidth
               sx={{ mt: 3, mb: 2 }}
               size="large"
-              disabled={loading || !email || !password}
+              disabled={loading || !email || !password || !confirmPassword}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Register'}
             </Button>
           </Box>
           <Typography variant="body2" align="center">
-            Don&apos;t have an account?{' '}
-            <Link component={RouterLink} to="/register">
-              Register
+            Already have an account?{' '}
+            <Link component={RouterLink} to="/login">
+              Sign In
             </Link>
           </Typography>
         </Paper>
@@ -140,4 +172,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default RegisterPage;
