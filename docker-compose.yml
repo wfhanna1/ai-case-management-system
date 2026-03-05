@@ -19,10 +19,10 @@ services:
         Host=postgres;
         Database=${POSTGRES_DB:-intake_processor};
         Username=${POSTGRES_USER:-postgres};
-        Password=${POSTGRES_PASSWORD:-postgres}
+        Password=${POSTGRES_PASSWORD}
       RabbitMQ__Host: rabbitmq
-      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER:-guest}
-      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,10 +40,10 @@ services:
         Host=postgres;
         Database=${POSTGRES_DB:-intake_processor};
         Username=${POSTGRES_USER:-postgres};
-        Password=${POSTGRES_PASSWORD:-postgres}
+        Password=${POSTGRES_PASSWORD}
       RabbitMQ__Host: rabbitmq
-      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER:-guest}
-      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,10 +61,10 @@ services:
         Host=postgres;
         Database=${POSTGRES_DB:-intake_processor};
         Username=${POSTGRES_USER:-postgres};
-        Password=${POSTGRES_PASSWORD:-postgres}
+        Password=${POSTGRES_PASSWORD}
       RabbitMQ__Host: rabbitmq
-      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER:-guest}
-      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       Qdrant__Host: qdrant
       Qdrant__Port: ${QDRANT_GRPC_PORT:-6334}
     depends_on:
@@ -95,7 +95,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-intake_processor}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -112,8 +112,8 @@ services:
       - "${RABBITMQ_AMQP_PORT:-5672}:5672"
       - "${RABBITMQ_MGMT_PORT:-15672}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
