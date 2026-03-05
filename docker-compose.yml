@@ -21,6 +21,9 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
+      Storage__BasePath: /app/storage
+    volumes:
+      - api_storage:/app/storage
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
       interval: 15s
@@ -151,3 +154,4 @@ volumes:
   postgres_data:
   rabbitmq_data:
   qdrant_data:
+  api_storage:

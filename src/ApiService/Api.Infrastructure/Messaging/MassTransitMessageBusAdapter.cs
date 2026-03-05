@@ -21,7 +21,7 @@ public sealed class MassTransitMessageBusAdapter : IMessageBusPort
 
     public async Task<Result<Unit>> PublishDocumentUploadedAsync(
         DocumentId documentId,
-        Guid templateId,
+        Guid? templateId,
         TenantId tenantId,
         string fileName,
         CancellationToken ct = default)

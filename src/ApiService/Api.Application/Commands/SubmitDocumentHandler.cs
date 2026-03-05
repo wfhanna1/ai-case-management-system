@@ -1,6 +1,7 @@
 using Api.Application.DTOs;
 using Api.Domain.Aggregates;
 using Api.Domain.Ports;
+using Microsoft.Extensions.Logging;
 using SharedKernel;
 
 namespace Api.Application.Commands;
@@ -10,15 +11,18 @@ public sealed class SubmitDocumentHandler
     private readonly IDocumentRepository _repository;
     private readonly IFileStoragePort _fileStorage;
     private readonly IMessageBusPort _messageBus;
+    private readonly ILogger<SubmitDocumentHandler> _logger;
 
     public SubmitDocumentHandler(
         IDocumentRepository repository,
         IFileStoragePort fileStorage,
-        IMessageBusPort messageBus)
+        IMessageBusPort messageBus,
+        ILogger<SubmitDocumentHandler> logger)
     {
         _repository = repository;
         _fileStorage = fileStorage;
         _messageBus = messageBus;
+        _logger = logger;
     }
 
     public async Task<Result<DocumentDto>> HandleAsync(
@@ -43,9 +47,15 @@ public sealed class SubmitDocumentHandler
             return Result<DocumentDto>.Failure(saveResult.Error);
         }
 
-        // templateId is Guid.Empty until template selection is implemented (Phase 2).
-        await _messageBus.PublishDocumentUploadedAsync(
-            document.Id, Guid.Empty, tenantId, request.FileName, ct);
+        var publishResult = await _messageBus.PublishDocumentUploadedAsync(
+            document.Id, null, tenantId, request.FileName, ct);
+
+        if (publishResult.IsFailure)
+        {
+            _logger.LogWarning(
+                "Failed to publish DocumentUploadedEvent for document {DocumentId}: {Error}. Document saved successfully; event will need retry.",
+                document.Id.Value, publishResult.Error.Message);
+        }
 
         return Result<DocumentDto>.Success(new DocumentDto(
             document.Id.Value,

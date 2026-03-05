@@ -6,7 +6,7 @@ namespace Messaging.Contracts.Events;
 /// </summary>
 public record DocumentUploadedEvent(
     Guid DocumentId,
-    Guid TemplateId,
+    Guid? TemplateId,
     Guid TenantId,
     string FileName,
     DateTimeOffset UploadedAt);

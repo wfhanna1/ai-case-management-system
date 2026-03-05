@@ -17,17 +17,23 @@ public sealed class LocalFileStorageAdapter : IFileStoragePort
         Directory.CreateDirectory(_basePath);
     }
 
+    private string ResolveSafePath(string storageKey)
+    {
+        var fullPath = Path.GetFullPath(Path.Combine(_basePath, storageKey));
+        var baseFull = Path.GetFullPath(_basePath + Path.DirectorySeparatorChar);
+        if (!fullPath.StartsWith(baseFull, StringComparison.Ordinal))
+            throw new UnauthorizedAccessException("Path traversal detected");
+        return fullPath;
+    }
+
     public async Task<Result<string>> UploadAsync(
         Stream content, string fileName, string contentType, TenantId tenantId, CancellationToken ct = default)
     {
         try
         {
-            var tenantDir = Path.Combine(_basePath, tenantId.Value.ToString());
-            Directory.CreateDirectory(tenantDir);
-
             var safeFileName = Path.GetFileName(fileName);
             var storageKey = $"{tenantId.Value}/{Guid.NewGuid()}/{safeFileName}";
-            var fullPath = Path.Combine(_basePath, storageKey);
+            var fullPath = ResolveSafePath(storageKey);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
             await using var fileStream = File.Create(fullPath);
@@ -45,7 +51,7 @@ public sealed class LocalFileStorageAdapter : IFileStoragePort
     {
         try
         {
-            var fullPath = Path.Combine(_basePath, storageKey);
+            var fullPath = ResolveSafePath(storageKey);
             if (!File.Exists(fullPath))
                 return Task.FromResult(Result<Stream>.Failure(new Error("NOT_FOUND", $"File not found: {storageKey}")));
 
@@ -62,7 +68,7 @@ public sealed class LocalFileStorageAdapter : IFileStoragePort
     {
         try
         {
-            var fullPath = Path.Combine(_basePath, storageKey);
+            var fullPath = ResolveSafePath(storageKey);
             if (File.Exists(fullPath))
                 File.Delete(fullPath);
 
