@@ -57,6 +57,11 @@ export async function mockGetReviewQueue(page: Page, docs: ReviewDocumentDto[]) 
 }
 
 export async function mockGetReviewDocument(page: Page, doc: ReviewDocumentDto) {
+  // Default mock for similar-cases (empty) so the useQuery doesn't hit a real server.
+  // Tests that need specific similar-cases data should call mockGetSimilarCases after this.
+  await page.route(`**/api/reviews/${doc.id}/similar-cases`, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: [] })) })
+  );
   await page.route(`**/api/reviews/${doc.id}`, route => {
     if (route.request().url().includes('/audit') || route.request().url().includes('/start') ||
         route.request().url().includes('/correct-field') || route.request().url().includes('/finalize') ||
