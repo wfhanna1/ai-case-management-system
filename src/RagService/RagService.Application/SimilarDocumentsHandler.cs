@@ -4,17 +4,15 @@ using SharedKernel;
 namespace RagService.Application;
 
 /// <summary>
-/// Finds documents similar to a given document by retrieving its embedding
+/// Finds documents similar to a given document by retrieving its stored embedding
 /// from the vector store and running a similarity search.
 /// </summary>
 public sealed class SimilarDocumentsHandler
 {
-    private readonly IEmbeddingPort _embeddingPort;
     private readonly IVectorStorePort _vectorStore;
 
-    public SimilarDocumentsHandler(IEmbeddingPort embeddingPort, IVectorStorePort vectorStore)
+    public SimilarDocumentsHandler(IVectorStorePort vectorStore)
     {
-        _embeddingPort = embeddingPort;
         _vectorStore = vectorStore;
     }
 
@@ -24,12 +22,8 @@ public sealed class SimilarDocumentsHandler
         int topK = 5,
         CancellationToken ct = default)
     {
-        // Generate embedding for the document text to use as query vector.
-        // In a full implementation, we'd retrieve the stored embedding directly.
-        // For now, we generate a deterministic embedding from the document ID
-        // to look up similar documents.
-        var embeddingResult = await _embeddingPort.GenerateEmbeddingAsync(
-            documentId.ToString(), ct);
+        // Retrieve the stored embedding for this document
+        var embeddingResult = await _vectorStore.GetEmbeddingAsync(documentId, ct);
 
         if (embeddingResult.IsFailure)
             return Result<IReadOnlyList<SearchHit>>.Failure(embeddingResult.Error);

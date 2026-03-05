@@ -71,6 +71,9 @@ public sealed class RagDataSeederTests
             return Task.FromResult(Result<Unit>.Success(Unit.Value));
         }
 
+        public Task<Result<float[]>> GetEmbeddingAsync(Guid documentId, CancellationToken ct = default)
+            => Task.FromResult(Result<float[]>.Success(new float[384]));
+
         public Task<Result<IReadOnlyList<SearchHit>>> SearchAsync(
             Guid tenantId, float[] queryEmbedding, int topK = 5, CancellationToken ct = default)
         {

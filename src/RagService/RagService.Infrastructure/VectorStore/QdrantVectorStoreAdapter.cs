@@ -118,6 +118,33 @@ public sealed class QdrantVectorStoreAdapter : IVectorStorePort
         }
     }
 
+    public async Task<Result<float[]>> GetEmbeddingAsync(
+        Guid documentId, CancellationToken ct = default)
+    {
+        try
+        {
+            var points = await _client.RetrieveAsync(
+                CollectionName,
+                documentId,
+                withPayload: false,
+                withVectors: true,
+                cancellationToken: ct);
+
+            if (points is null || points.Count == 0)
+                return Result<float[]>.Failure(
+                    new Error("EMBEDDING_NOT_FOUND",
+                        $"No embedding found for document {documentId}"));
+
+            var vector = points[0].Vectors.Vector.Data.ToArray();
+            return Result<float[]>.Success(vector);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get embedding for DocumentId={DocumentId}", documentId);
+            return Result<float[]>.Failure(new Error("VECTOR_STORE_ERROR", ex.Message));
+        }
+    }
+
     private async Task EnsureCollectionAsync(uint vectorSize, CancellationToken ct)
     {
         if (_collectionEnsured)
