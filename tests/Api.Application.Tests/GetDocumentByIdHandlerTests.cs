@@ -79,5 +79,11 @@ public sealed class GetDocumentByIdHandlerTests
 
         public Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default)
             => throw new NotImplementedException();
+
+        public Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> SearchAsync(
+            TenantId tenantId, string? fileNameContains, DocumentStatus? status,
+            DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore,
+            string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

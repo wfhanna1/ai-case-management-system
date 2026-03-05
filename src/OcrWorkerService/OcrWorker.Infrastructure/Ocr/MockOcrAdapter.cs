@@ -8,11 +8,11 @@ public sealed class MockOcrAdapter : IOcrPort
     private static readonly Dictionary<string, string[]> FieldPatterns = new()
     {
         ["intake"] = ["ClientName", "DateOfBirth", "CaseNumber", "Address"],
-        ["report"] = ["ReportTitle", "Author", "Date", "Summary"],
-        ["form"] = ["FormType", "SubmittedBy", "SubmissionDate", "Status"],
+        ["report"] = ["PatientName", "ReportTitle", "Author", "Date", "Summary"],
+        ["form"] = ["SubjectName", "FormType", "SubmittedBy", "SubmissionDate", "Status"],
     };
 
-    private static readonly string[] DefaultFields = ["DocumentTitle", "Date", "Content"];
+    private static readonly string[] DefaultFields = ["ClientName", "DocumentTitle", "Date", "Content"];
 
     public async Task<Result<OcrResult>> ExtractTextAsync(
         Stream documentContent,
@@ -27,7 +27,10 @@ public sealed class MockOcrAdapter : IOcrPort
         foreach (var fieldName in fieldNames)
         {
             var confidence = Random.Shared.NextDouble() * 0.69 + 0.3;
-            fields[fieldName] = new ExtractedField(fieldName, $"Sample {fieldName} value", confidence);
+            var value = fieldName.Contains("Name", StringComparison.OrdinalIgnoreCase)
+                ? PickRandomName()
+                : $"Sample {fieldName} value";
+            fields[fieldName] = new ExtractedField(fieldName, value, confidence);
         }
 
         var rawText = $"[Mock OCR] Extracted text from {fileName}. " +
@@ -35,6 +38,12 @@ public sealed class MockOcrAdapter : IOcrPort
 
         return Result<OcrResult>.Success(new OcrResult(rawText, fields));
     }
+
+    private static readonly string[] SampleNames =
+        ["Alice Johnson", "Bob Martinez", "Carol Chen", "David Nguyen", "Eva Williams"];
+
+    private static string PickRandomName() =>
+        SampleNames[Random.Shared.Next(SampleNames.Length)];
 
     private static string[] ResolveFields(string fileName)
     {

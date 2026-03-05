@@ -4,6 +4,9 @@ import type {
   ReviewDocumentDto,
   AuditLogEntryDto,
   FormTemplateDto,
+  CaseDetailDto,
+  SearchDocumentsResultDto,
+  SearchCasesResultDto,
 } from '../fixtures/mock-data';
 import { apiOk } from '../fixtures/mock-data';
 
@@ -122,6 +125,35 @@ export async function mockLoginFailure(page: Page, code: string, message: string
       contentType: 'application/json',
       body: JSON.stringify({ data: null, error: { code, message } }),
     })
+  );
+}
+
+// Search
+export async function mockSearchDocuments(page: Page, result: SearchDocumentsResultDto) {
+  await page.route('**/api/documents/search*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(result)) })
+  );
+}
+
+// Cases
+export async function mockGetCases(page: Page, result: SearchCasesResultDto) {
+  await page.route(/\/api\/cases(\?.*)?$/, route => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(result)) });
+    }
+    return route.continue();
+  });
+}
+
+export async function mockGetCase(page: Page, detail: CaseDetailDto) {
+  await page.route(`**/api/cases/${detail.id}`, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(detail)) })
+  );
+}
+
+export async function mockSearchCases(page: Page, result: SearchCasesResultDto) {
+  await page.route('**/api/cases/search*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(result)) })
   );
 }
 

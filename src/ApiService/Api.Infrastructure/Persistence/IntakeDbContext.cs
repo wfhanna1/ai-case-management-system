@@ -9,6 +9,7 @@ public sealed class IntakeDbContext : DbContext
     private readonly ITenantContext? _tenantContext;
 
     public DbSet<IntakeDocument> Documents => Set<IntakeDocument>();
+    public DbSet<Case> Cases => Set<Case>();
     public DbSet<User> Users => Set<User>();
     public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
@@ -63,6 +64,17 @@ public sealed class IntakeDbContext : DbContext
                 .HasColumnName("reviewed_by");
 
             entity.Property(d => d.ReviewedAt).HasColumnName("reviewed_at");
+
+            entity.Property(d => d.CaseId)
+                .HasConversion(
+                    id => id == null ? (Guid?)null : id.Value,
+                    value => value == null ? null : new CaseId(value.Value))
+                .HasColumnName("case_id");
+
+            entity.HasOne<Case>()
+                .WithMany(c => c.Documents)
+                .HasForeignKey(d => d.CaseId)
+                .IsRequired(false);
 
             entity.Navigation(d => d.ExtractedFields).HasField("_extractedFields");
             entity.OwnsMany(d => d.ExtractedFields, fields =>
@@ -171,6 +183,41 @@ public sealed class IntakeDbContext : DbContext
                 _tenantContext != null &&
                 _tenantContext.TenantId != null &&
                 t.TenantId == _tenantContext.TenantId);
+        });
+
+        modelBuilder.Entity<Case>(entity =>
+        {
+            entity.Ignore(c => c.DomainEvents);
+            entity.ToTable("cases");
+
+            entity.HasKey(c => c.Id);
+
+            entity.Property(c => c.Id)
+                .HasConversion(
+                    id => id.Value,
+                    value => new CaseId(value))
+                .HasColumnName("id");
+
+            entity.Property(c => c.TenantId)
+                .HasConversion(
+                    id => id.Value,
+                    value => new TenantId(value))
+                .HasColumnName("tenant_id");
+
+            entity.Property(c => c.SubjectName).HasColumnName("subject_name").HasMaxLength(500);
+            entity.Property(c => c.CreatedAt).HasColumnName("created_at");
+            entity.Property(c => c.UpdatedAt).HasColumnName("updated_at");
+
+            entity.Navigation(c => c.Documents).HasField("_documents");
+
+            entity.HasIndex(c => new { c.TenantId, c.SubjectName })
+                .HasDatabaseName("ix_cases_tenant_subject_name")
+                .IsUnique();
+
+            entity.HasQueryFilter(c =>
+                _tenantContext != null &&
+                _tenantContext.TenantId != null &&
+                c.TenantId == _tenantContext.TenantId);
         });
 
         modelBuilder.Entity<AuditLogEntry>(entity =>

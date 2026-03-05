@@ -1,0 +1,38 @@
+using FluentValidation;
+
+namespace Api.WebApi.Validation;
+
+public sealed record SearchCasesRequest(
+    string? Q,
+    string? Status,
+    DateTimeOffset? From,
+    DateTimeOffset? To,
+    int Page = 1,
+    int PageSize = 20);
+
+public sealed class SearchCasesRequestValidator : AbstractValidator<SearchCasesRequest>
+{
+    private static readonly string[] ValidStatuses =
+        ["Submitted", "Processing", "Completed", "Failed", "PendingReview", "InReview", "Finalized"];
+
+    public SearchCasesRequestValidator()
+    {
+        RuleFor(x => x.Page)
+            .GreaterThanOrEqualTo(1).WithMessage("Page must be at least 1.");
+
+        RuleFor(x => x.PageSize)
+            .InclusiveBetween(1, 100).WithMessage("PageSize must be between 1 and 100.");
+
+        When(x => !string.IsNullOrWhiteSpace(x.Status), () =>
+        {
+            RuleFor(x => x.Status)
+                .Must(s => ValidStatuses.Contains(s, StringComparer.OrdinalIgnoreCase))
+                .WithMessage("Status must be a valid document status.");
+        });
+
+        RuleFor(x => x)
+            .Must(x => x.From is null || x.To is null || x.From <= x.To)
+            .WithMessage("'From' date must not be after 'To' date.")
+            .WithName("From");
+    }
+}

@@ -120,4 +120,6 @@ React 19 + TypeScript + Vite SPA. MUI v6 for UI, React Query v5 for server state
 
 ## Workflow
 
-**After completing each story:** Go back and review the issue's acceptance criteria. Verify each item is truly complete, then check off the completed items on the GitHub issue. Do not mark items complete unless you have verified them.
+**After completing each issue:** Commit the work and push it to a feature branch. Do not merge into main directly. Go back and review the issue's acceptance criteria. Verify each item is truly complete, then check off the completed items on the GitHub issue. Do not mark items complete unless you have verified them.
+
+**At the end of each phase:** Run `/code-review` on all changes before merging into main. Fix any high-severity findings, then merge the feature branch into main via a pull request.

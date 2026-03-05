@@ -1,6 +1,7 @@
 using Api.Application.Commands;
 using Api.Application.DTOs;
 using Api.Application.Queries;
+using Api.WebApi.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Api.WebApi;
@@ -21,17 +22,20 @@ public sealed class DocumentsController : ControllerBase
     private readonly SubmitDocumentHandler _submitHandler;
     private readonly GetDocumentByIdHandler _getByIdHandler;
     private readonly ListDocumentsByTenantHandler _listHandler;
+    private readonly SearchDocumentsHandler _searchHandler;
     private readonly ITenantContext _tenantContext;
 
     public DocumentsController(
         SubmitDocumentHandler submitHandler,
         GetDocumentByIdHandler getByIdHandler,
         ListDocumentsByTenantHandler listHandler,
+        SearchDocumentsHandler searchHandler,
         ITenantContext tenantContext)
     {
         _submitHandler = submitHandler;
         _getByIdHandler = getByIdHandler;
         _listHandler = listHandler;
+        _searchHandler = searchHandler;
         _tenantContext = tenantContext;
     }
 
@@ -81,6 +85,23 @@ public sealed class DocumentsController : ControllerBase
             return NotFound(ApiResponse<DocumentDto>.Fail("NOT_FOUND", "Document not found"));
 
         return Ok(ApiResponse<DocumentDto>.Ok(result.Value));
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] SearchDocumentsRequest request,
+        CancellationToken ct = default)
+    {
+        var tenantId = _tenantContext.TenantId!.Value;
+        var result = await _searchHandler.HandleAsync(
+            tenantId, request.FileName, request.Status, request.From, request.To,
+            request.FieldValue, request.Page, request.PageSize, ct);
+
+        if (result.IsFailure)
+            return StatusCode(500, ApiResponse<SearchDocumentsResultDto>.Fail(
+                result.Error.Code, "An internal error occurred"));
+
+        return Ok(ApiResponse<SearchDocumentsResultDto>.Ok(result.Value));
     }
 
     [HttpGet]

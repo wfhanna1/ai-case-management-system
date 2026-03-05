@@ -23,4 +23,9 @@ public interface IDocumentRepository
     Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default);
     Task<Result<Unit>> UpdateAsync(IntakeDocument document, CancellationToken ct = default);
     Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default);
+
+    Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> SearchAsync(
+        TenantId tenantId, string? fileNameContains, DocumentStatus? status,
+        DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore,
+        string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default);
 }
