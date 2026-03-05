@@ -14,6 +14,12 @@ public sealed class ApiResponse<T>
 
     public static ApiResponse<T> Fail(string code, string message) =>
         new() { Error = new ApiError(code, message) };
+
+    public static ApiResponse<T> Fail(string code, string message, Dictionary<string, string[]> details) =>
+        new() { Error = new ApiError(code, message) { Details = details } };
 }
 
-public sealed record ApiError(string Code, string Message);
+public sealed record ApiError(string Code, string Message)
+{
+    public Dictionary<string, string[]>? Details { get; init; }
+}

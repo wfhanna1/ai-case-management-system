@@ -42,6 +42,14 @@ public sealed class DocumentsController : ControllerBase
         IFormFile file,
         CancellationToken ct)
     {
+        if (file is null)
+            return BadRequest(ApiResponse<DocumentDto>.Fail(
+                "MISSING_FILE", "A file is required."));
+
+        if (file.Length == 0)
+            return BadRequest(ApiResponse<DocumentDto>.Fail(
+                "EMPTY_FILE", "The uploaded file is empty."));
+
         if (!AllowedContentTypes.Contains(file.ContentType))
             return BadRequest(ApiResponse<DocumentDto>.Fail(
                 "INVALID_FILE_TYPE", "Permitted types: PDF, PNG, JPEG, TIFF"));

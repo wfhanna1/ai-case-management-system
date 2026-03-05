@@ -1,14 +1,13 @@
 import api from './api';
 
 export interface AuthResponse {
-  data: {
+  data?: {
     userId: string;
     accessToken: string;
     refreshToken: string;
     expiresAt: string;
   };
-  success: boolean;
-  error?: { code: string; message: string };
+  error?: { code: string; message: string; details?: Record<string, string[]> };
 }
 
 export interface LoginPayload {

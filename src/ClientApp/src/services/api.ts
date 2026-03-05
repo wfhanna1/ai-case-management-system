@@ -42,7 +42,7 @@ api.interceptors.response.use(
               refreshToken,
             });
 
-            if (res.data?.success && res.data.data) {
+            if (res.data?.data) {
               const newToken = res.data.data.accessToken;
               const newRefreshToken = res.data.data.refreshToken;
 
