@@ -18,6 +18,8 @@ public sealed class JwtTokenService : ITokenService
         _settings = settings.Value;
     }
 
+    public int AccessTokenExpiryMinutes => _settings.AccessTokenExpiryMinutes;
+
     public string GenerateAccessToken(User user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));

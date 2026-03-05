@@ -47,14 +47,17 @@ public sealed class RegisterUserHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_InvalidRoles_ReturnsFailure()
+    public async Task HandleAsync_IgnoresClientRoles_AssignsIntakeWorker()
     {
-        var request = new RegisterUserRequest(Guid.NewGuid(), "test@example.com", "password123", ["NonExistentRole"]);
+        var request = new RegisterUserRequest(Guid.NewGuid(), "test@example.com", "password123", ["Admin"]);
 
         var result = await _handler.HandleAsync(request);
 
-        Assert.True(result.IsFailure);
-        Assert.Equal("INVALID_ROLES", result.Error.Code);
+        Assert.True(result.IsSuccess);
+        // Verify the saved user has IntakeWorker, not Admin
+        Assert.NotNull(_userRepo.SavedUser);
+        Assert.Contains(Api.Domain.Aggregates.UserRole.IntakeWorker, _userRepo.SavedUser!.Roles);
+        Assert.DoesNotContain(Api.Domain.Aggregates.UserRole.Admin, _userRepo.SavedUser!.Roles);
     }
 
     [Fact]
@@ -76,6 +79,7 @@ public sealed class RegisterUserHandlerTests
         public User? ExistingUser { get; set; }
         public Result<Unit> SaveResult { get; set; } = Result<Unit>.Success(Unit.Value);
         public bool SaveCalled { get; private set; }
+        public User? SavedUser { get; private set; }
 
         public Task<Result<User?>> FindByEmailAsync(string email, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(Result<User?>.Success(ExistingUser));
@@ -86,6 +90,7 @@ public sealed class RegisterUserHandlerTests
         public Task<Result<Unit>> SaveAsync(User user, CancellationToken ct = default)
         {
             SaveCalled = true;
+            SavedUser = user;
             return Task.FromResult(SaveResult);
         }
 
@@ -102,6 +107,7 @@ public sealed class RegisterUserHandlerTests
     private sealed class StubTokenService : ITokenService
     {
         public string GenerateAccessToken(User user) => "access-token";
+        public int AccessTokenExpiryMinutes => 15;
         public string GenerateRefreshToken() => "refresh-token";
         public string HashRefreshToken(string rawToken) => "hashed-" + rawToken;
     }

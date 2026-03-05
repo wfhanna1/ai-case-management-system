@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Api.Application.DTOs;
 using Api.Domain.Aggregates;
 using Api.Domain.Ports;
@@ -45,7 +47,9 @@ public sealed class RefreshTokenHandler
             return Result<AuthResponse>.Failure(new Error("TOKEN_EXPIRED", "Refresh token has expired."));
 
         var incomingHash = _tokenService.HashRefreshToken(request.RefreshToken);
-        if (incomingHash != user.RefreshTokenHash)
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(incomingHash),
+                Encoding.UTF8.GetBytes(user.RefreshTokenHash)))
             return Result<AuthResponse>.Failure(new Error("INVALID_TOKEN", "Invalid refresh token."));
 
         // Token rotation: issue new pair
@@ -62,6 +66,7 @@ public sealed class RefreshTokenHandler
         _logger.LogInformation("Token refreshed for user {UserId}", user.Id.Value);
 
         return Result<AuthResponse>.Success(new AuthResponse(
-            user.Id.Value, accessToken, newRefreshToken, DateTimeOffset.UtcNow.AddMinutes(15)));
+            user.Id.Value, accessToken, newRefreshToken,
+            DateTimeOffset.UtcNow.AddMinutes(_tokenService.AccessTokenExpiryMinutes)));
     }
 }

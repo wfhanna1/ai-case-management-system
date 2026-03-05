@@ -14,8 +14,6 @@ import useAuthStore from '@/stores/authStore';
 import { register, DEMO_TENANTS } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
 
-const AVAILABLE_ROLES = ['IntakeWorker', 'Reviewer', 'Admin'];
-
 function RegisterPage() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
@@ -23,7 +21,6 @@ function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('IntakeWorker');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +41,7 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await register({ tenantId, email, password, roles: [role] });
+      const res = await register({ tenantId, email, password, roles: ['IntakeWorker'] });
       if (!res.success) {
         setError(res.error?.message ?? 'Registration failed');
         return;
@@ -135,20 +132,6 @@ function RegisterPage() {
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
             />
-            <TextField
-              select
-              label="Role"
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              fullWidth
-              margin="normal"
-            >
-              {AVAILABLE_ROLES.map(r => (
-                <MenuItem key={r} value={r}>
-                  {r}
-                </MenuItem>
-              ))}
-            </TextField>
             <Button
               type="submit"
               variant="contained"

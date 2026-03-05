@@ -35,6 +35,17 @@ public sealed class TenantResolutionMiddleware
             return;
         }
 
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            _logger.LogWarning("Request to {Path} rejected: not authenticated",
+                context.Request.Path);
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(
+                ApiResponse<object>.Fail("UNAUTHENTICATED",
+                    "A valid access token is required."));
+            return;
+        }
+
         var tenantId = ResolveTenantId(context);
         if (tenantId is null)
         {
@@ -43,7 +54,7 @@ public sealed class TenantResolutionMiddleware
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(
                 ApiResponse<object>.Fail("MISSING_TENANT",
-                    "A valid JWT with a tenant_id claim is required."));
+                    "The JWT is missing a valid tenant_id claim."));
             return;
         }
 

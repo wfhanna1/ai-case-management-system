@@ -55,6 +55,7 @@ public sealed class LoginHandler
         _logger.LogInformation("User {UserId} logged in for tenant {TenantId}", user.Id.Value, tenantId.Value);
 
         return Result<AuthResponse>.Success(new AuthResponse(
-            user.Id.Value, accessToken, refreshToken, DateTimeOffset.UtcNow.AddMinutes(15)));
+            user.Id.Value, accessToken, refreshToken,
+            DateTimeOffset.UtcNow.AddMinutes(_tokenService.AccessTokenExpiryMinutes)));
     }
 }

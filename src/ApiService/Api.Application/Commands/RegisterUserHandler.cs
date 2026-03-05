@@ -38,16 +38,9 @@ public sealed class RegisterUserHandler
         if (existingResult.Value is not null)
             return Result<AuthResponse>.Failure(new Error("DUPLICATE_EMAIL", "A user with this email already exists."));
 
-        var roles = request.Roles
-            .Select(r => Enum.TryParse<UserRole>(r, ignoreCase: true, out var parsed)
-                ? parsed
-                : (UserRole?)null)
-            .Where(r => r.HasValue)
-            .Select(r => r!.Value)
-            .ToList();
-
-        if (roles.Count == 0)
-            return Result<AuthResponse>.Failure(new Error("INVALID_ROLES", "At least one valid role is required."));
+        // Self-registration always assigns IntakeWorker.
+        // Admin role assignment requires a separate admin-only endpoint.
+        var roles = new List<UserRole> { UserRole.IntakeWorker };
 
         var passwordHash = _passwordHasher.Hash(request.Password);
         var user = User.Register(tenantId, request.Email, passwordHash, roles);
@@ -65,6 +58,7 @@ public sealed class RegisterUserHandler
         _logger.LogInformation("User {UserId} registered for tenant {TenantId}", user.Id.Value, tenantId.Value);
 
         return Result<AuthResponse>.Success(new AuthResponse(
-            user.Id.Value, accessToken, refreshToken, DateTimeOffset.UtcNow.AddMinutes(15)));
+            user.Id.Value, accessToken, refreshToken,
+            DateTimeOffset.UtcNow.AddMinutes(_tokenService.AccessTokenExpiryMinutes)));
     }
 }
