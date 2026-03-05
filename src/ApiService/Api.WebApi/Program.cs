@@ -1,4 +1,5 @@
 using Api.Application.Commands;
+using Api.Application.Queries;
 using Api.Domain.Ports;
 using Api.Infrastructure.Messaging;
 using Api.Infrastructure.Persistence;
@@ -15,6 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
         "Missing required configuration: ConnectionStrings__DefaultConnection");
+
+var storagePath = builder.Configuration["Storage:BasePath"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "storage");
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -62,12 +66,14 @@ builder.Services.AddDbContext<IntakeDbContext>(options =>
 
 builder.Services.AddTransient<IDocumentRepository, EfDocumentRepository>();
 builder.Services.AddTransient<IFileStoragePort>(_ =>
-    new LocalFileStorageAdapter(Path.Combine(Directory.GetCurrentDirectory(), "storage")));
+    new LocalFileStorageAdapter(storagePath));
 
 // ---------------------------------------------------------------------------
 // Application services
 // ---------------------------------------------------------------------------
 builder.Services.AddTransient<SubmitDocumentHandler>();
+builder.Services.AddTransient<GetDocumentByIdHandler>();
+builder.Services.AddTransient<ListDocumentsByTenantHandler>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)

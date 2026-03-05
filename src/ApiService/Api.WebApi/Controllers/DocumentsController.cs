@@ -1,9 +1,8 @@
 using Api.Application.Commands;
 using Api.Application.DTOs;
-using Api.Domain.Aggregates;
-using Api.Domain.Ports;
+using Api.Application.Queries;
 using Microsoft.AspNetCore.Mvc;
-using SharedKernel;
+using Api.WebApi;
 
 namespace Api.WebApi.Controllers;
 
@@ -11,13 +10,23 @@ namespace Api.WebApi.Controllers;
 [Route("api/[controller]")]
 public sealed class DocumentsController : ControllerBase
 {
-    private readonly SubmitDocumentHandler _submitHandler;
-    private readonly IDocumentRepository _repository;
+    private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "application/pdf", "image/png", "image/jpeg", "image/tiff"
+    };
 
-    public DocumentsController(SubmitDocumentHandler submitHandler, IDocumentRepository repository)
+    private readonly SubmitDocumentHandler _submitHandler;
+    private readonly GetDocumentByIdHandler _getByIdHandler;
+    private readonly ListDocumentsByTenantHandler _listHandler;
+
+    public DocumentsController(
+        SubmitDocumentHandler submitHandler,
+        GetDocumentByIdHandler getByIdHandler,
+        ListDocumentsByTenantHandler listHandler)
     {
         _submitHandler = submitHandler;
-        _repository = repository;
+        _getByIdHandler = getByIdHandler;
+        _listHandler = listHandler;
     }
 
     [HttpPost]
@@ -27,14 +36,19 @@ public sealed class DocumentsController : ControllerBase
         IFormFile file,
         CancellationToken ct)
     {
+        if (!AllowedContentTypes.Contains(file.ContentType))
+            return BadRequest(ApiResponse<DocumentDto>.Fail(
+                "INVALID_FILE_TYPE", "Permitted types: PDF, PNG, JPEG, TIFF"));
+
         await using var stream = file.OpenReadStream();
         var request = new SubmitDocumentRequest(tenantId, file.FileName, file.ContentType);
         var result = await _submitHandler.HandleAsync(stream, request, ct);
 
         if (result.IsFailure)
-            return BadRequest(new { error = result.Error.Code, message = result.Error.Message });
+            return BadRequest(ApiResponse<DocumentDto>.Fail(result.Error.Code, result.Error.Message));
 
-        return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value);
+        return CreatedAtAction(nameof(GetById), new { id = result.Value.Id },
+            ApiResponse<DocumentDto>.Ok(result.Value));
     }
 
     [HttpGet("{id:guid}")]
@@ -43,19 +57,15 @@ public sealed class DocumentsController : ControllerBase
         [FromHeader(Name = "X-Tenant-Id")] Guid tenantId,
         CancellationToken ct)
     {
-        var result = await _repository.FindByIdAsync(
-            new DocumentId(id), new TenantId(tenantId), ct);
+        var result = await _getByIdHandler.HandleAsync(id, tenantId, ct);
 
         if (result.IsFailure)
-            return StatusCode(500, new { error = result.Error.Code });
+            return StatusCode(500, ApiResponse<DocumentDto>.Fail(result.Error.Code, "An internal error occurred"));
 
         if (result.Value is null)
-            return NotFound();
+            return NotFound(ApiResponse<DocumentDto>.Fail("NOT_FOUND", "Document not found"));
 
-        var doc = result.Value;
-        return Ok(new DocumentDto(
-            doc.Id.Value, doc.TenantId.Value, doc.OriginalFileName,
-            doc.Status.ToString(), doc.SubmittedAt, doc.ProcessedAt));
+        return Ok(ApiResponse<DocumentDto>.Ok(result.Value));
     }
 
     [HttpGet]
@@ -65,14 +75,15 @@ public sealed class DocumentsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var result = await _repository.ListByTenantAsync(
-            new TenantId(tenantId), page, pageSize, ct);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var result = await _listHandler.HandleAsync(tenantId, page, pageSize, ct);
 
         if (result.IsFailure)
-            return StatusCode(500, new { error = result.Error.Code });
+            return StatusCode(500, ApiResponse<IReadOnlyList<DocumentDto>>.Fail(
+                result.Error.Code, "An internal error occurred"));
 
-        return Ok(result.Value.Select(doc => new DocumentDto(
-            doc.Id.Value, doc.TenantId.Value, doc.OriginalFileName,
-            doc.Status.ToString(), doc.SubmittedAt, doc.ProcessedAt)));
+        return Ok(ApiResponse<IReadOnlyList<DocumentDto>>.Ok(result.Value));
     }
 }

@@ -1,6 +1,7 @@
 using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SharedKernel;
 
 namespace Api.Infrastructure.Persistence;
@@ -8,10 +9,12 @@ namespace Api.Infrastructure.Persistence;
 public sealed class EfDocumentRepository : IDocumentRepository
 {
     private readonly IntakeDbContext _db;
+    private readonly ILogger<EfDocumentRepository> _logger;
 
-    public EfDocumentRepository(IntakeDbContext db)
+    public EfDocumentRepository(IntakeDbContext db, ILogger<EfDocumentRepository> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task<Result<IntakeDocument?>> FindByIdAsync(
@@ -25,7 +28,8 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
         catch (Exception ex)
         {
-            return Result<IntakeDocument?>.Failure(new Error("DB_ERROR", ex.Message));
+            _logger.LogError(ex, "Failed to find document {DocumentId} for tenant {TenantId}", id.Value, tenantId.Value);
+            return Result<IntakeDocument?>.Failure(new Error("DB_ERROR", "An internal error occurred"));
         }
     }
 
@@ -44,7 +48,8 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
         catch (Exception ex)
         {
-            return Result<IReadOnlyList<IntakeDocument>>.Failure(new Error("DB_ERROR", ex.Message));
+            _logger.LogError(ex, "Failed to list documents for tenant {TenantId}", tenantId.Value);
+            return Result<IReadOnlyList<IntakeDocument>>.Failure(new Error("DB_ERROR", "An internal error occurred"));
         }
     }
 
@@ -52,15 +57,16 @@ public sealed class EfDocumentRepository : IDocumentRepository
     {
         try
         {
-            var entry = _db.Entry(document);
-            if (entry.State == Microsoft.EntityFrameworkCore.EntityState.Detached)
-            {
-                var tracked = _db.ChangeTracker.Entries<IntakeDocument>()
-                    .FirstOrDefault(e => e.Entity.Id == document.Id);
-                if (tracked is not null)
-                    tracked.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            var exists = await _db.Documents
+                .AnyAsync(d => d.Id == document.Id, ct);
 
+            if (exists)
+            {
                 _db.Documents.Update(document);
+            }
+            else
+            {
+                _db.Documents.Add(document);
             }
 
             await _db.SaveChangesAsync(ct);
@@ -68,7 +74,8 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
         catch (Exception ex)
         {
-            return Result<Unit>.Failure(new Error("DB_ERROR", ex.Message));
+            _logger.LogError(ex, "Failed to save document {DocumentId}", document.Id.Value);
+            return Result<Unit>.Failure(new Error("DB_ERROR", "An internal error occurred"));
         }
     }
 
@@ -87,7 +94,8 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
         catch (Exception ex)
         {
-            return Result<Unit>.Failure(new Error("DB_ERROR", ex.Message));
+            _logger.LogError(ex, "Failed to delete document {DocumentId} for tenant {TenantId}", id.Value, tenantId.Value);
+            return Result<Unit>.Failure(new Error("DB_ERROR", "An internal error occurred"));
         }
     }
 }

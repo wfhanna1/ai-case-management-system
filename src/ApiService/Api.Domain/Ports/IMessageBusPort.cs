@@ -15,7 +15,7 @@ public interface IMessageBusPort
     /// </summary>
     Task<Result<Unit>> PublishDocumentUploadedAsync(
         DocumentId documentId,
-        Guid templateId,
+        Guid? templateId,
         TenantId tenantId,
         string fileName,
         CancellationToken ct = default);
