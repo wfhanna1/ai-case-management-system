@@ -3,6 +3,7 @@ using Api.Application.DTOs;
 using Api.Application.Queries;
 using Microsoft.AspNetCore.Mvc;
 using Api.WebApi;
+using SharedKernel;
 
 namespace Api.WebApi.Controllers;
 
@@ -18,21 +19,23 @@ public sealed class DocumentsController : ControllerBase
     private readonly SubmitDocumentHandler _submitHandler;
     private readonly GetDocumentByIdHandler _getByIdHandler;
     private readonly ListDocumentsByTenantHandler _listHandler;
+    private readonly ITenantContext _tenantContext;
 
     public DocumentsController(
         SubmitDocumentHandler submitHandler,
         GetDocumentByIdHandler getByIdHandler,
-        ListDocumentsByTenantHandler listHandler)
+        ListDocumentsByTenantHandler listHandler,
+        ITenantContext tenantContext)
     {
         _submitHandler = submitHandler;
         _getByIdHandler = getByIdHandler;
         _listHandler = listHandler;
+        _tenantContext = tenantContext;
     }
 
     [HttpPost]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
     public async Task<IActionResult> Submit(
-        [FromForm] Guid tenantId,
         IFormFile file,
         CancellationToken ct)
     {
@@ -40,6 +43,7 @@ public sealed class DocumentsController : ControllerBase
             return BadRequest(ApiResponse<DocumentDto>.Fail(
                 "INVALID_FILE_TYPE", "Permitted types: PDF, PNG, JPEG, TIFF"));
 
+        var tenantId = _tenantContext.TenantId!.Value;
         await using var stream = file.OpenReadStream();
         var request = new SubmitDocumentRequest(tenantId, file.FileName, file.ContentType);
         var result = await _submitHandler.HandleAsync(stream, request, ct);
@@ -54,9 +58,9 @@ public sealed class DocumentsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(
         Guid id,
-        [FromHeader(Name = "X-Tenant-Id")] Guid tenantId,
         CancellationToken ct)
     {
+        var tenantId = _tenantContext.TenantId!.Value;
         var result = await _getByIdHandler.HandleAsync(id, tenantId, ct);
 
         if (result.IsFailure)
@@ -70,11 +74,11 @@ public sealed class DocumentsController : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> List(
-        [FromHeader(Name = "X-Tenant-Id")] Guid tenantId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        var tenantId = _tenantContext.TenantId!.Value;
         var result = await _listHandler.HandleAsync(tenantId, page, pageSize, ct);
 
         if (result.IsFailure)

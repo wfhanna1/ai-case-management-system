@@ -2,6 +2,7 @@ using Api.Domain.Ports;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SharedKernel;
 
 namespace Api.Infrastructure.Messaging;
 
@@ -38,6 +39,7 @@ public static class MessagingServiceCollectionExtensions
                     h.Password(password);
                 });
 
+                cfg.UsePublishFilter(typeof(TenantHeaderPublishFilter<>), ctx);
             });
         });
 

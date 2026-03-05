@@ -7,6 +7,7 @@ using Api.Infrastructure.Storage;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using SharedKernel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,12 @@ builder.Services.AddCors(options =>
 });
 
 // ---------------------------------------------------------------------------
+// Multi-tenancy -- scoped tenant context populated by middleware
+// ---------------------------------------------------------------------------
+builder.Services.AddScoped<RequestTenantContext>();
+builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<RequestTenantContext>());
+
+// ---------------------------------------------------------------------------
 // Persistence -- EF Core + PostgreSQL
 // ---------------------------------------------------------------------------
 builder.Services.AddDbContext<IntakeDbContext>(options =>
@@ -86,6 +93,7 @@ builder.Services.AddApiMessaging(builder.Configuration);
 var app = builder.Build();
 
 app.UseCors("Frontend");
+app.UseMiddleware<Api.WebApi.TenantResolutionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -98,6 +106,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 app.MapControllers();
+
+// Seed demo data in Development
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<IntakeDbContext>();
+    await Api.WebApi.DemoTenants.SeedAsync(db);
+}
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
