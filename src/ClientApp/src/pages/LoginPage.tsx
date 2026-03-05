@@ -57,11 +57,16 @@ function LoginPage() {
         return;
       }
       const claims = parseJwt(res.data.accessToken);
+      const roleClaim = claims.role
+        ?? claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+      const roles = Array.isArray(roleClaim)
+        ? (roleClaim as string[])
+        : roleClaim ? [roleClaim as string] : [];
       setAuth(
         {
           id: res.data.userId,
           email: (claims.email as string) ?? email,
-          roles: Array.isArray(claims.role) ? (claims.role as string[]) : [claims.role as string],
+          roles,
           tenantId: (claims.tenant_id as string) ?? '',
         },
         res.data.accessToken,

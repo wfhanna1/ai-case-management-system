@@ -17,7 +17,7 @@ namespace Messaging.Tests.Consumers;
 public sealed class DocumentProcessedConsumerTests
 {
     [Fact]
-    public async Task DocumentProcessedConsumer_WhenReceived_UpdatesDocumentStatus()
+    public async Task DocumentProcessedConsumer_WhenReceived_TransitionsToPendingReview()
     {
         var tenantId = Guid.NewGuid();
         var dbName = $"test-{Guid.NewGuid()}";
@@ -30,6 +30,7 @@ public sealed class DocumentProcessedConsumerTests
             .AddDbContext<IntakeDbContext>(opts =>
                 opts.UseInMemoryDatabase(dbName))
             .AddScoped<IDocumentRepository, EfDocumentRepository>()
+            .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -37,7 +38,7 @@ public sealed class DocumentProcessedConsumerTests
             .BuildServiceProvider(true);
 
         // Seed a document in Submitted state. The consumer transitions
-        // Submitted -> Processing -> Completed.
+        // Submitted -> Processing -> Completed -> PendingReview.
         Guid documentId;
         using (var scope = provider.CreateScope())
         {
@@ -74,7 +75,7 @@ public sealed class DocumentProcessedConsumerTests
                 .IgnoreQueryFilters()
                 .SingleAsync();
 
-            Assert.Equal(DocumentStatus.Completed, doc.Status);
+            Assert.Equal(DocumentStatus.PendingReview, doc.Status);
             Assert.NotNull(doc.ProcessedAt);
         }
         finally
@@ -98,6 +99,7 @@ public sealed class DocumentProcessedConsumerTests
             .AddDbContext<IntakeDbContext>(opts =>
                 opts.UseInMemoryDatabase(dbName))
             .AddScoped<IDocumentRepository, EfDocumentRepository>()
+            .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -147,5 +149,16 @@ public sealed class DocumentProcessedConsumerTests
         {
             await harness.Stop();
         }
+    }
+
+    private sealed class StubAuditLogRepository : IAuditLogRepository
+    {
+        public Task<Result<Unit>> SaveAsync(AuditLogEntry entry, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit>.Success(Unit.Value));
+
+        public Task<Result<IReadOnlyList<AuditLogEntry>>> ListByDocumentAsync(
+            DocumentId documentId, TenantId tenantId, CancellationToken ct = default)
+            => Task.FromResult(Result<IReadOnlyList<AuditLogEntry>>.Success(
+                (IReadOnlyList<AuditLogEntry>)new List<AuditLogEntry>()));
     }
 }

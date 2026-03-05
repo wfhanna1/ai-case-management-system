@@ -43,8 +43,10 @@ Seeded automatically in Development via `DevelopmentDbSeeder`. Password for all:
 |-------|------|--------|
 | admin@alpha.demo | Admin | Alpha Clinic |
 | worker@alpha.demo | IntakeWorker | Alpha Clinic |
+| reviewer@alpha.demo | Reviewer | Alpha Clinic |
 | admin@beta.demo | Admin | Beta Hospital |
 | worker@beta.demo | IntakeWorker | Beta Hospital |
+| reviewer@beta.demo | Reviewer | Beta Hospital |
 
 ---
 

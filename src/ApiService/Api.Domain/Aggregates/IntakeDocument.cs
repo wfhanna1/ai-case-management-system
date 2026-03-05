@@ -14,6 +14,11 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
     public DocumentStatus Status { get; private set; }
     public DateTimeOffset SubmittedAt { get; private set; }
     public DateTimeOffset? ProcessedAt { get; private set; }
+    public UserId? ReviewedBy { get; private set; }
+    public DateTimeOffset? ReviewedAt { get; private set; }
+
+    private readonly List<ExtractedField> _extractedFields = [];
+    public IReadOnlyList<ExtractedField> ExtractedFields => _extractedFields.AsReadOnly();
 
     // Required by EF Core for materialization from database.
     private IntakeDocument() : base(DocumentId.New())
@@ -68,8 +73,9 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
 
     /// <summary>
     /// Records successful OCR completion and extracted text.
+    /// Call MarkPendingReview() after this to route the document to reviewers.
     /// </summary>
-    public Result<Unit> MarkCompleted()
+    public Result<Unit> MarkCompleted(IReadOnlyList<ExtractedField>? extractedFields = null)
     {
         if (Status != DocumentStatus.Processing)
             return Result<Unit>.Failure(new Error("INVALID_TRANSITION",
@@ -77,7 +83,83 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
 
         Status = DocumentStatus.Completed;
         ProcessedAt = DateTimeOffset.UtcNow;
+
+        if (extractedFields is not null)
+        {
+            _extractedFields.Clear();
+            _extractedFields.AddRange(extractedFields);
+        }
+
         RaiseDomainEvent(new Events.DocumentCompletedEvent(Id, TenantId));
+        return Result<Unit>.Success(Unit.Value);
+    }
+
+    /// <summary>
+    /// Transitions the document from Completed to PendingReview.
+    /// Called after OCR completion to enqueue the document for a reviewer.
+    /// </summary>
+    public Result<Unit> MarkPendingReview()
+    {
+        if (Status != DocumentStatus.Completed)
+            return Result<Unit>.Failure(new Error("INVALID_TRANSITION",
+                $"Cannot transition to PendingReview from {Status}."));
+
+        Status = DocumentStatus.PendingReview;
+        return Result<Unit>.Success(Unit.Value);
+    }
+
+    /// <summary>
+    /// A reviewer claims this document, transitioning it from PendingReview to InReview.
+    /// </summary>
+    public Result<Unit> StartReview(UserId reviewerId)
+    {
+        if (Status != DocumentStatus.PendingReview)
+            return Result<Unit>.Failure(new Error("INVALID_TRANSITION",
+                $"Cannot start review from {Status}."));
+
+        Status = DocumentStatus.InReview;
+        ReviewedBy = reviewerId;
+        return Result<Unit>.Success(Unit.Value);
+    }
+
+    /// <summary>
+    /// Corrects the value of a named extracted field. The document must be InReview.
+    /// </summary>
+    public Result<(string previousValue, string newValue)> CorrectField(string fieldName, string correctedValue, UserId reviewerId)
+    {
+        if (Status != DocumentStatus.InReview)
+            return Result<(string, string)>.Failure(new Error("INVALID_TRANSITION",
+                $"Cannot correct fields when document is {Status}."));
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(fieldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correctedValue);
+
+        var field = _extractedFields.FirstOrDefault(f =>
+            string.Equals(f.Name, fieldName, StringComparison.OrdinalIgnoreCase));
+
+        if (field is null)
+            return Result<(string, string)>.Failure(new Error("FIELD_NOT_FOUND",
+                $"Field '{fieldName}' does not exist on this document."));
+
+        var previousValue = field.CorrectedValue ?? field.Value;
+        var index = _extractedFields.IndexOf(field);
+        _extractedFields[index] = field.WithCorrection(correctedValue);
+
+        return Result<(string, string)>.Success((previousValue, correctedValue));
+    }
+
+    /// <summary>
+    /// Finalizes the review. The document must be InReview.
+    /// </summary>
+    public Result<Unit> Finalize(UserId reviewerId)
+    {
+        if (Status != DocumentStatus.InReview)
+            return Result<Unit>.Failure(new Error("INVALID_TRANSITION",
+                $"Cannot finalize from {Status}."));
+
+        Status = DocumentStatus.Finalized;
+        ReviewedBy ??= reviewerId;
+        ReviewedAt = DateTimeOffset.UtcNow;
         return Result<Unit>.Success(Unit.Value);
     }
 

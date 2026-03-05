@@ -8,6 +8,8 @@ import TemplatesPage from '@/pages/TemplatesPage';
 import TemplateDetailPage from '@/pages/TemplateDetailPage';
 import UploadPage from '@/pages/UploadPage';
 import DocumentsPage from '@/pages/DocumentsPage';
+import ReviewQueuePage from '@/pages/ReviewQueuePage';
+import ReviewDetailPage from '@/pages/ReviewDetailPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 function App() {
@@ -54,6 +56,22 @@ function App() {
           element={
             <ProtectedRoute>
               <DocumentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute requiredRole="Reviewer">
+              <ReviewQueuePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews/:id"
+          element={
+            <ProtectedRoute requiredRole="Reviewer">
+              <ReviewDetailPage />
             </ProtectedRoute>
           }
         />

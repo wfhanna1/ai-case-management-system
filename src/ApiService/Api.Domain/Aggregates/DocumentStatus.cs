@@ -8,5 +8,8 @@ public enum DocumentStatus
     Submitted = 0,
     Processing = 1,
     Completed = 2,
-    Failed = 3
+    Failed = 3,
+    PendingReview = 4,
+    InReview = 5,
+    Finalized = 6
 }
