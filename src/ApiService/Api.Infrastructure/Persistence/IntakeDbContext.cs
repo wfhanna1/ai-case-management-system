@@ -9,6 +9,7 @@ public sealed class IntakeDbContext : DbContext
     private readonly ITenantContext? _tenantContext;
 
     public DbSet<IntakeDocument> Documents => Set<IntakeDocument>();
+    public DbSet<User> Users => Set<User>();
 
     /// <summary>
     /// Used by EF Core tooling (dotnet ef migrations) when no tenant context is available.
@@ -62,7 +63,51 @@ public sealed class IntakeDbContext : DbContext
                 _tenantContext != null &&
                 _tenantContext.TenantId != null &&
                 d.TenantId == _tenantContext.TenantId);
+        });
 
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Ignore(u => u.DomainEvents);
+            entity.ToTable("users");
+
+            entity.HasKey(u => u.Id);
+
+            entity.Property(u => u.Id)
+                .HasConversion(
+                    id => id.Value,
+                    value => new UserId(value))
+                .HasColumnName("id");
+
+            entity.Property(u => u.TenantId)
+                .HasConversion(
+                    id => id.Value,
+                    value => new TenantId(value))
+                .HasColumnName("tenant_id");
+
+            entity.Property(u => u.Email).HasColumnName("email").HasMaxLength(256);
+            entity.Property(u => u.PasswordHash).HasColumnName("password_hash").HasMaxLength(256);
+            entity.Property(u => u.CreatedAt).HasColumnName("created_at");
+            entity.Property(u => u.RefreshTokenHash).HasColumnName("refresh_token_hash").HasMaxLength(256);
+            entity.Property(u => u.RefreshTokenExpiresAt).HasColumnName("refresh_token_expires_at");
+
+            // Store roles as comma-separated string
+            entity.Property(u => u.Roles)
+                .HasColumnName("roles")
+                .HasMaxLength(256)
+                .HasConversion(
+                    roles => string.Join(",", roles),
+                    csv => csv.Split(",", StringSplitOptions.RemoveEmptyEntries)
+                        .Select(r => Enum.Parse<UserRole>(r))
+                        .ToList());
+
+            entity.HasIndex(u => new { u.TenantId, u.Email })
+                .IsUnique()
+                .HasDatabaseName("ix_users_tenant_email");
+
+            entity.HasQueryFilter(u =>
+                _tenantContext != null &&
+                _tenantContext.TenantId != null &&
+                u.TenantId == _tenantContext.TenantId);
         });
     }
 }

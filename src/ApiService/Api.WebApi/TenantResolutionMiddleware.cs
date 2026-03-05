@@ -4,11 +4,10 @@ using SharedKernel;
 namespace Api.WebApi;
 
 /// <summary>
-/// Extracts TenantId from X-Tenant-Id request header and populates ITenantContext.
-/// Returns HTTP 400 for any non-exempt path that lacks a valid tenant header.
-/// Exempt paths (health check, Swagger) pass through without requiring a tenant.
-///
-/// Upgrade path (Issue #8): replace ResolveTenantId() to read from JWT claims.
+/// Extracts TenantId from the authenticated user's JWT "tenant_id" claim
+/// and populates ITenantContext. Returns HTTP 401 for any non-exempt path
+/// that lacks a valid tenant claim.
+/// Exempt paths (health check, Swagger, auth endpoints) pass through without requiring a tenant.
 /// </summary>
 public sealed class TenantResolutionMiddleware
 {
@@ -16,6 +15,7 @@ public sealed class TenantResolutionMiddleware
     [
         new("/health"),
         new("/swagger"),
+        new("/api/auth"),
     ];
 
     private readonly RequestDelegate _next;
@@ -38,12 +38,12 @@ public sealed class TenantResolutionMiddleware
         var tenantId = ResolveTenantId(context);
         if (tenantId is null)
         {
-            _logger.LogWarning("Request to {Path} rejected: missing or invalid X-Tenant-Id header",
+            _logger.LogWarning("Request to {Path} rejected: missing or invalid tenant_id claim",
                 context.Request.Path);
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(
                 ApiResponse<object>.Fail("MISSING_TENANT",
-                    "X-Tenant-Id header is required and must be a valid non-empty GUID."));
+                    "A valid JWT with a tenant_id claim is required."));
             return;
         }
 
@@ -52,15 +52,15 @@ public sealed class TenantResolutionMiddleware
     }
 
     /// <summary>
-    /// Issue #8: replace this method body to read from JWT claims.
+    /// Reads tenant_id from the authenticated user's JWT claims.
     /// </summary>
     private static TenantId? ResolveTenantId(HttpContext context)
     {
-        var headerValue = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(headerValue))
+        var claimValue = context.User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrWhiteSpace(claimValue))
             return null;
 
-        if (!Guid.TryParse(headerValue, out var guid))
+        if (!Guid.TryParse(claimValue, out var guid))
             return null;
 
         try

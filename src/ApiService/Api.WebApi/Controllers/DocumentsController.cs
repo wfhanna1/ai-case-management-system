@@ -1,6 +1,7 @@
 using Api.Application.Commands;
 using Api.Application.DTOs;
 using Api.Application.Queries;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Api.WebApi;
 using SharedKernel;
@@ -8,6 +9,7 @@ using SharedKernel;
 namespace Api.WebApi.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public sealed class DocumentsController : ControllerBase
 {
@@ -34,6 +36,7 @@ public sealed class DocumentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "RequireIntakeWorker")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
     public async Task<IActionResult> Submit(
         IFormFile file,
