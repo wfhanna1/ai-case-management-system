@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.app.json && vite build",
     "lint": "eslint src --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "test:e2e": "npx playwright test"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
+    "@playwright/test": "^1.58.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
