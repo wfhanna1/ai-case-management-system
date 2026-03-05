@@ -99,7 +99,9 @@ React 19 + TypeScript + Vite SPA. MUI v6 for UI, React Query v5 for server state
 
 **ApiResponse\<T\> envelope.** All controller responses wrap data in `ApiResponse<T>.Ok(data)` or `ApiResponse<T>.Fail(code, message)`. For validation errors, use `ApiResponse<T>.Fail(code, message, details)` where `details` is `Dictionary<string, string[]>` mapping field names to error messages. `ApiError.Details` is nullable so existing consumers are unaffected.
 
-**Input validation.** FluentValidation validators in `Api.WebApi/Validation/` for all request DTOs. A global `ValidationFilter` (IActionFilter) intercepts invalid ModelState and returns 422 with `VALIDATION_ERROR` code and field-level `Details`. The default `[ApiController]` model state filter is suppressed. Frontend uses per-field inline errors (MUI `error` + `helperText`) with validators in `src/utils/validation.ts`. Server errors display in a form-level `<Alert>`.
+**Input validation.** FluentValidation validators in `Api.WebApi/Validation/` for all request DTOs. A global `ValidationFilter` (IAsyncActionFilter) resolves validators from DI, runs them, and returns 422 with `VALIDATION_ERROR` code and field-level `Details`. The default `[ApiController]` model state filter is suppressed. Validators must validate nested collections with `RuleForEach().ChildRules()`. Frontend uses per-field inline errors (MUI `error` + `helperText`) with validators in `src/utils/validation.ts`. Server errors display in a form-level `<Alert>`.
+
+**Form templates.** `FormTemplate` aggregate with `TemplateField` value objects stored as JSON column via `OwnsMany(...).ToJson()`. Four template types: ChildWelfare, AdultProtective, HousingAssistance, MentalHealthReferral. Six field types: Text, Date, Number, Select, Checkbox, TextArea. Select fields store options as JSON string array. Shared DTO mapping in `Api.Application.Mappings.FormTemplateMappings`.
 
 ---
 
