@@ -158,7 +158,7 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
                 $"Cannot finalize from {Status}."));
 
         Status = DocumentStatus.Finalized;
-        ReviewedBy = reviewerId;
+        ReviewedBy ??= reviewerId;
         ReviewedAt = DateTimeOffset.UtcNow;
         return Result<Unit>.Success(Unit.Value);
     }

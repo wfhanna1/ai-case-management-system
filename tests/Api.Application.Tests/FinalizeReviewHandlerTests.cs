@@ -108,6 +108,9 @@ public sealed class FinalizeReviewHandlerTests
         public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusAsync(TenantId tenantId, DocumentStatus status, int page, int pageSize, CancellationToken ct = default)
             => throw new NotImplementedException();
 
+        public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default)
             => throw new NotImplementedException();
 

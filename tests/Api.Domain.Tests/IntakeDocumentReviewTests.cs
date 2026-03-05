@@ -207,6 +207,21 @@ public sealed class IntakeDocumentReviewTests
     }
 
     [Fact]
+    public void Finalize_preserves_original_reviewer_when_already_set()
+    {
+        var doc = CreateCompletedDocument(_tenantId);
+        doc.MarkPendingReview();
+        var originalReviewer = UserId.New();
+        var finalizingUser = UserId.New();
+        doc.StartReview(originalReviewer);
+
+        var result = doc.Finalize(finalizingUser);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(originalReviewer, doc.ReviewedBy);
+    }
+
+    [Fact]
     public void Finalize_from_PendingReview_fails()
     {
         var doc = CreateCompletedDocument(_tenantId);
