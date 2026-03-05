@@ -21,6 +21,7 @@ COPY src/RagService/RagService.Domain/RagService.Domain.csproj                 s
 COPY src/RagService/RagService.Application/RagService.Application.csproj       src/RagService/RagService.Application/
 COPY src/RagService/RagService.Infrastructure/RagService.Infrastructure.csproj src/RagService/RagService.Infrastructure/
 COPY src/RagService/RagService.Host/RagService.Host.csproj                     src/RagService/RagService.Host/
+COPY src/Messaging/Messaging.Contracts/Messaging.Contracts.csproj              src/Messaging/Messaging.Contracts/
 COPY tests/SharedKernel.Tests/SharedKernel.Tests.csproj                        tests/SharedKernel.Tests/
 COPY tests/Api.Domain.Tests/Api.Domain.Tests.csproj                            tests/Api.Domain.Tests/
 COPY tests/Api.Application.Tests/Api.Application.Tests.csproj                  tests/Api.Application.Tests/
@@ -28,6 +29,7 @@ COPY tests/Api.Infrastructure.Tests/Api.Infrastructure.Tests.csproj            t
 COPY tests/Api.WebApi.Tests/Api.WebApi.Tests.csproj                            tests/Api.WebApi.Tests/
 COPY tests/OcrWorker.Tests/OcrWorker.Tests.csproj                              tests/OcrWorker.Tests/
 COPY tests/RagService.Tests/RagService.Tests.csproj                            tests/RagService.Tests/
+COPY tests/Messaging.Tests/Messaging.Tests.csproj                              tests/Messaging.Tests/
 
 RUN dotnet restore src/ApiService/Api.WebApi/Api.WebApi.csproj
 
@@ -49,8 +51,5 @@ USER appuser
 COPY --from=build /app/publish ./
 
 EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl --fail http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["dotnet", "Api.WebApi.dll"]
