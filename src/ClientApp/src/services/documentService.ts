@@ -39,6 +39,9 @@ export async function uploadDocument(
   const res = await api.post<ApiResponse<DocumentDto>>('/documents', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  if (res.data.error) {
+    throw new Error(res.data.error.message);
+  }
   return res.data;
 }
 
@@ -46,13 +49,20 @@ export async function getDocuments(
   page: number,
   pageSize: number
 ): Promise<PaginatedResult<DocumentDto>> {
-  const res = await api.get<ApiResponse<PaginatedResult<DocumentDto>>>(
+  const res = await api.get<ApiResponse<DocumentDto[]>>(
     `/documents?page=${page}&pageSize=${pageSize}`
   );
   if (res.data.error) {
     throw new Error(res.data.error.message);
   }
-  return res.data.data ?? { items: [], totalCount: 0, pageNumber: page, pageSize, totalPages: 0 };
+  const items = res.data.data ?? [];
+  return {
+    items,
+    totalCount: items.length,
+    pageNumber: page,
+    pageSize,
+    totalPages: 1,
+  };
 }
 
 export async function getDocument(id: string): Promise<DocumentDto> {

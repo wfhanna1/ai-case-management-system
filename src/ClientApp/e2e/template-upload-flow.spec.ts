@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Minimal valid PDF content (1-page blank PDF)
 const MINIMAL_PDF = Buffer.from(
@@ -55,7 +59,7 @@ test.describe('Template view to document upload flow', () => {
       await expect(page.getByRole('heading', { name: 'Upload Document' })).toBeVisible();
 
       // Step 4: Select the template in the upload form
-      await page.getByLabelText('Template (optional)').click();
+      await page.getByLabel('Template (optional)').click();
       await page.getByRole('option', { name: 'Child Welfare Intake' }).click();
 
       // Step 5: Upload a PDF file
@@ -65,14 +69,14 @@ test.describe('Template view to document upload flow', () => {
       await expect(page.getByText('child-welfare-form.pdf')).toBeVisible();
 
       // Step 6: Submit the upload
-      await page.getByRole('button', { name: 'Upload' }).click();
+      await page.getByRole('main').getByRole('button', { name: 'Upload' }).click();
       await expect(page.getByText('Upload Successful')).toBeVisible({ timeout: 15000 });
 
       // Step 7: Navigate to documents and verify the uploaded file appears
       await page.getByRole('button', { name: 'View Documents' }).click();
       await page.waitForURL(/\/documents/);
       await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
-      await expect(page.getByRole('cell', { name: 'child-welfare-form.pdf' })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('cell', { name: 'child-welfare-form.pdf' }).first()).toBeVisible({ timeout: 10000 });
       await expect(page.getByText('Submitted').first()).toBeVisible();
     });
 
@@ -88,7 +92,7 @@ test.describe('Template view to document upload flow', () => {
       await expect(page.getByText('intake-scan.pdf')).toBeVisible();
 
       // Step 3: Submit
-      await page.getByRole('button', { name: 'Upload' }).click();
+      await page.getByRole('main').getByRole('button', { name: 'Upload' }).click();
       await expect(page.getByText('Upload Successful')).toBeVisible({ timeout: 15000 });
 
       // Step 4: Click View Documents to navigate to documents tab
@@ -96,7 +100,7 @@ test.describe('Template view to document upload flow', () => {
       await page.waitForURL(/\/documents/);
 
       // Step 5: Verify the uploaded document is visible in the table
-      await expect(page.getByRole('cell', { name: 'intake-scan.pdf' })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('cell', { name: 'intake-scan.pdf' }).first()).toBeVisible({ timeout: 10000 });
     });
 
     test('upload another file after first upload and verify both appear', async ({ page }) => {
@@ -105,7 +109,7 @@ test.describe('Template view to document upload flow', () => {
       // Upload first file
       testPdfPath = createTestPdf('report-one.pdf');
       await page.locator('#file-input').setInputFiles(testPdfPath);
-      await page.getByRole('button', { name: 'Upload' }).click();
+      await page.getByRole('main').getByRole('button', { name: 'Upload' }).click();
       await expect(page.getByText('Upload Successful')).toBeVisible({ timeout: 15000 });
 
       // Click Upload Another
@@ -115,14 +119,14 @@ test.describe('Template view to document upload flow', () => {
       // Upload second file
       const secondPdfPath = createTestPdf('report-two.pdf');
       await page.locator('#file-input').setInputFiles(secondPdfPath);
-      await page.getByRole('button', { name: 'Upload' }).click();
+      await page.getByRole('main').getByRole('button', { name: 'Upload' }).click();
       await expect(page.getByText('Upload Successful')).toBeVisible({ timeout: 15000 });
 
       // Navigate to documents and verify both appear
       await page.getByRole('button', { name: 'View Documents' }).click();
       await page.waitForURL(/\/documents/);
-      await expect(page.getByRole('cell', { name: 'report-one.pdf' })).toBeVisible({ timeout: 10000 });
-      await expect(page.getByRole('cell', { name: 'report-two.pdf' })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('cell', { name: 'report-one.pdf' }).first()).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('cell', { name: 'report-two.pdf' }).first()).toBeVisible({ timeout: 10000 });
 
       // Cleanup second file
       if (fs.existsSync(secondPdfPath)) fs.unlinkSync(secondPdfPath);

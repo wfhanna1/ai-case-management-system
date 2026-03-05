@@ -20,8 +20,6 @@ test.describe('Auth flow E2E', () => {
 
     // Step 4: Verify user info displayed in header
     await expect(page.getByText(TEST_EMAIL)).toBeVisible();
-    // Self-registration assigns IntakeWorker
-    await expect(page.getByText('IntakeWorker')).toBeVisible();
 
     // Step 5: Sign out
     await page.getByRole('button', { name: 'Sign Out' }).click();

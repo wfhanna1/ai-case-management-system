@@ -46,6 +46,7 @@ WORKDIR /app
 
 # Run as non-root
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN mkdir -p /app/storage && chown appuser:appgroup /app/storage
 USER appuser
 
 COPY --from=build /app/publish ./
