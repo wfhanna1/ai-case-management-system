@@ -32,14 +32,21 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import {
   getReview,
   startReview,
   correctField,
   finalizeReview,
   getAuditTrail,
+  getSimilarCases,
   type ExtractedFieldDto,
   type AuditLogEntryDto,
+  type SimilarCaseDto,
 } from '@/services/reviewService';
 
 function confidenceColor(confidence: number): 'success' | 'warning' | 'error' {
@@ -79,6 +86,12 @@ function ReviewDetailPage() {
     queryKey: ['audit', id],
     queryFn: () => getAuditTrail(id!),
     enabled: auditOpen && !!id,
+  });
+
+  const { data: similarData, isLoading: similarLoading } = useQuery({
+    queryKey: ['similar-cases', id],
+    queryFn: () => getSimilarCases(id!),
+    enabled: !!id,
   });
 
   const startMutation = useMutation({
@@ -327,6 +340,90 @@ function ReviewDetailPage() {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Similar Cases Panel */}
+      <Accordion sx={{ mt: 3 }} data-testid="similar-cases-panel">
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CompareArrowsIcon color="action" />
+            <Typography variant="h6">
+              Similar Cases
+              {similarData && similarData.items.length > 0 && (
+                <Chip
+                  label={similarData.items.length}
+                  size="small"
+                  color="primary"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          {similarLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress data-testid="similar-loading" />
+            </Box>
+          ) : similarData && similarData.items.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {similarData.items.map((item: SimilarCaseDto) => (
+                <Paper
+                  key={item.documentId}
+                  variant="outlined"
+                  sx={{ p: 2 }}
+                  data-testid={`similar-case-${item.documentId}`}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
+                    <Chip
+                      label={`${(item.score * 100).toFixed(0)}% match`}
+                      size="small"
+                      color={item.score >= 0.9 ? 'success' : item.score >= 0.7 ? 'warning' : 'default'}
+                      data-testid={`score-badge-${item.documentId}`}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    {item.summary}
+                  </Typography>
+                  {Object.keys(item.metadata).length > 0 && (
+                    <Accordion variant="outlined" disableGutters>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Field Details
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ pt: 0 }}>
+                        <Table size="small">
+                          <TableBody>
+                            {Object.entries(item.metadata).map(([key, value]) => (
+                              <TableRow key={key}>
+                                <TableCell sx={{ fontWeight: 600, border: 'none', py: 0.5 }}>
+                                  {key}
+                                </TableCell>
+                                <TableCell sx={{ border: 'none', py: 0.5 }}>
+                                  {value}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </AccordionDetails>
+                    </Accordion>
+                  )}
+                </Paper>
+              ))}
+            </Box>
+          ) : (
+            <Typography
+              color="text.secondary"
+              align="center"
+              sx={{ py: 3 }}
+              data-testid="no-similar-cases"
+            >
+              No similar cases found
+            </Typography>
+          )}
+        </AccordionDetails>
+      </Accordion>
 
       {isInReview && (
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>

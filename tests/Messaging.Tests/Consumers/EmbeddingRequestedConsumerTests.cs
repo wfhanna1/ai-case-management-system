@@ -4,7 +4,11 @@ using Messaging.Contracts.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RagService.Application;
+using RagService.Domain.Ports;
+using RagService.Infrastructure.Embeddings;
 using RagService.Infrastructure.Messaging;
+using SharedKernel;
 
 namespace Messaging.Tests.Consumers;
 
@@ -17,13 +21,7 @@ public sealed class EmbeddingRequestedConsumerTests
     [Fact]
     public async Task EmbeddingRequestedConsumer_WhenMessagePublished_ConsumesAndPublishesCompletedEvent()
     {
-        await using var provider = new ServiceCollection()
-            .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
-            .AddMassTransitTestHarness(cfg =>
-            {
-                cfg.AddConsumer<EmbeddingRequestedConsumer>();
-            })
-            .BuildServiceProvider(true);
+        await using var provider = BuildProvider();
 
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
@@ -62,13 +60,7 @@ public sealed class EmbeddingRequestedConsumerTests
     [Fact]
     public async Task EmbeddingRequestedConsumer_NoFaults_WhenMessageIsValid()
     {
-        await using var provider = new ServiceCollection()
-            .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
-            .AddMassTransitTestHarness(cfg =>
-            {
-                cfg.AddConsumer<EmbeddingRequestedConsumer>();
-            })
-            .BuildServiceProvider(true);
+        await using var provider = BuildProvider();
 
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
@@ -89,5 +81,33 @@ public sealed class EmbeddingRequestedConsumerTests
         {
             await harness.Stop();
         }
+    }
+
+    private static ServiceProvider BuildProvider()
+    {
+        return new ServiceCollection()
+            .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
+            .AddSingleton<IEmbeddingPort, MockEmbeddingAdapter>()
+            .AddSingleton<IVectorStorePort, InMemoryVectorStore>()
+            .AddSingleton<EmbedDocumentHandler>()
+            .AddMassTransitTestHarness(cfg =>
+            {
+                cfg.AddConsumer<EmbeddingRequestedConsumer>();
+            })
+            .BuildServiceProvider(true);
+    }
+
+    /// <summary>In-memory vector store for testing (no Qdrant dependency).</summary>
+    private sealed class InMemoryVectorStore : IVectorStorePort
+    {
+        public Task<Result<Unit>> UpsertAsync(
+            Guid documentId, Guid tenantId, float[] embedding,
+            Dictionary<string, string> metadata, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit>.Success(Unit.Value));
+
+        public Task<Result<IReadOnlyList<SearchHit>>> SearchAsync(
+            Guid tenantId, float[] queryEmbedding, int topK = 5, CancellationToken ct = default)
+            => Task.FromResult(Result<IReadOnlyList<SearchHit>>.Success(
+                Array.Empty<SearchHit>()));
     }
 }

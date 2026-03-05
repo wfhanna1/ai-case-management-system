@@ -1,20 +1,25 @@
 using MassTransit;
 using Messaging.Contracts.Events;
 using Microsoft.Extensions.Logging;
+using RagService.Application;
 
 namespace RagService.Infrastructure.Messaging;
 
 /// <summary>
 /// Consumes EmbeddingRequestedEvent messages and triggers vector embedding and storage.
-/// After (stub) processing it publishes EmbeddingCompletedEvent so the pipeline can
+/// After processing it publishes EmbeddingCompletedEvent so the pipeline can
 /// mark the document as fully indexed.
 /// </summary>
 public sealed class EmbeddingRequestedConsumer : IConsumer<EmbeddingRequestedEvent>
 {
+    private readonly EmbedDocumentHandler _handler;
     private readonly ILogger<EmbeddingRequestedConsumer> _logger;
 
-    public EmbeddingRequestedConsumer(ILogger<EmbeddingRequestedConsumer> logger)
+    public EmbeddingRequestedConsumer(
+        EmbedDocumentHandler handler,
+        ILogger<EmbeddingRequestedConsumer> logger)
     {
+        _handler = handler;
         _logger = logger;
     }
 
@@ -28,8 +33,21 @@ public sealed class EmbeddingRequestedConsumer : IConsumer<EmbeddingRequestedEve
             message.TenantId,
             message.FieldValues.Count);
 
-        // TODO: inject and invoke actual embedding use case from RagService.Application.
-        // Stub: acknowledge receipt and signal completion.
+        var result = await _handler.HandleAsync(
+            message.DocumentId,
+            message.TenantId,
+            message.TextContent,
+            message.FieldValues,
+            context.CancellationToken);
+
+        if (result.IsFailure)
+        {
+            _logger.LogError(
+                "Embedding failed for DocumentId={DocumentId}: {Error}",
+                message.DocumentId, result.Error.Message);
+            throw new InvalidOperationException(
+                $"Embedding failed: {result.Error.Message}");
+        }
 
         var completed = new EmbeddingCompletedEvent(
             DocumentId: message.DocumentId,

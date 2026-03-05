@@ -216,6 +216,32 @@ export function createSearchCasesResultDto(
   };
 }
 
+export interface SimilarCaseDto {
+  documentId: string;
+  score: number;
+  summary: string;
+  metadata: Record<string, string>;
+}
+
+export interface SimilarCasesResultDto {
+  items: SimilarCaseDto[];
+}
+
+export function createSimilarCaseDto(overrides: Partial<SimilarCaseDto> = {}): SimilarCaseDto {
+  return {
+    documentId: nextId(),
+    score: 0.92,
+    summary: 'Subject: Alice Johnson. Category: ChildWelfare. Presenting issue: Physical abuse suspected.',
+    metadata: {
+      ChildName: 'Alice Johnson',
+      Type: 'ChildWelfare',
+      ReasonForReferral: 'Physical abuse suspected',
+      Age: '8',
+    },
+    ...overrides,
+  };
+}
+
 export function apiOk<T>(data: T) {
   return { data, error: null };
 }

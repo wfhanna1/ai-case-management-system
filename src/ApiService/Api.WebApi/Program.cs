@@ -180,6 +180,15 @@ builder.Services.AddTransient<ListCasesHandler>();
 builder.Services.AddTransient<GetCaseByIdHandler>();
 builder.Services.AddTransient<SearchCasesHandler>();
 builder.Services.AddTransient<AssignDocumentToCaseHandler>();
+builder.Services.AddTransient<GetSimilarCasesHandler>();
+
+// ---------------------------------------------------------------------------
+// RAG Service client + Summary adapter
+// ---------------------------------------------------------------------------
+var ragServiceUrl = builder.Configuration["RagService:BaseUrl"] ?? "http://rag-service:8080";
+builder.Services.AddHttpClient<IRagServiceClient, Api.Infrastructure.RagClient.HttpRagServiceClient>(
+    client => client.BaseAddress = new Uri(ragServiceUrl));
+builder.Services.AddSingleton<ISummaryPort, Api.Infrastructure.Summary.TemplateSummaryAdapter>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)
