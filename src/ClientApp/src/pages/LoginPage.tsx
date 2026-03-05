@@ -13,6 +13,7 @@ import Link from '@mui/material/Link';
 import useAuthStore from '@/stores/authStore';
 import { login, DEMO_TENANTS } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
+import { validateEmail, validateRequired } from '@/utils/validation';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -22,19 +23,38 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const validateField = (field: string, value: string) => {
+    let err: string | null = null;
+    if (field === 'email') err = validateEmail(value);
+    if (field === 'password') err = validateRequired(value, 'Password');
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      if (err) next[field] = err;
+      else delete next[field];
+      return next;
+    });
+    return err;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const emailErr = validateField('email', email);
+    const passErr = validateField('password', password);
+    if (emailErr || passErr) return;
+
     setLoading(true);
 
     try {
       const res = await login({ tenantId, email, password });
-      if (!res.success) {
+      if (res.error || !res.data) {
         setError(res.error?.message ?? 'Login failed');
         return;
       }
@@ -105,6 +125,9 @@ function LoginPage() {
               autoFocus
               value={email}
               onChange={e => setEmail(e.target.value)}
+              onBlur={() => validateField('email', email)}
+              error={!!fieldErrors.email}
+              helperText={fieldErrors.email}
               inputProps={{ 'aria-label': 'email address' }}
             />
             <TextField
@@ -115,6 +138,9 @@ function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              onBlur={() => validateField('password', password)}
+              error={!!fieldErrors.password}
+              helperText={fieldErrors.password}
               inputProps={{ 'aria-label': 'password' }}
             />
             <Button
@@ -123,7 +149,7 @@ function LoginPage() {
               fullWidth
               sx={{ mt: 3, mb: 2 }}
               size="large"
-              disabled={loading || !email || !password}
+              disabled={loading}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
             </Button>

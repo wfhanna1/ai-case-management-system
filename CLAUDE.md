@@ -97,7 +97,9 @@ React 19 + TypeScript + Vite SPA. MUI v6 for UI, React Query v5 for server state
 
 **MassTransit messaging.** Each worker uses `AddMassTransit` with RabbitMQ transport. Queue names follow `{service}-{event}` convention. Exponential retry: 3 attempts, 1s to 30s, factor 2.
 
-**ApiResponse\<T\> envelope.** All controller responses wrap data in `ApiResponse<T>.Ok(data)` or `ApiResponse<T>.Fail(code, message)`.
+**ApiResponse\<T\> envelope.** All controller responses wrap data in `ApiResponse<T>.Ok(data)` or `ApiResponse<T>.Fail(code, message)`. For validation errors, use `ApiResponse<T>.Fail(code, message, details)` where `details` is `Dictionary<string, string[]>` mapping field names to error messages. `ApiError.Details` is nullable so existing consumers are unaffected.
+
+**Input validation.** FluentValidation validators in `Api.WebApi/Validation/` for all request DTOs. A global `ValidationFilter` (IActionFilter) intercepts invalid ModelState and returns 422 with `VALIDATION_ERROR` code and field-level `Details`. The default `[ApiController]` model state filter is suppressed. Frontend uses per-field inline errors (MUI `error` + `helperText`) with validators in `src/utils/validation.ts`. Server errors display in a form-level `<Alert>`.
 
 ---
 

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using FluentValidation;
 using Microsoft.OpenApi.Models;
 using SharedKernel;
 
@@ -33,7 +34,17 @@ var allowedOrigins = builder.Configuration
 // ---------------------------------------------------------------------------
 // Services
 // ---------------------------------------------------------------------------
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<Api.WebApi.Validation.ValidationFilter>();
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddSwaggerGen(options =>
 {

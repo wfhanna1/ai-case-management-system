@@ -13,6 +13,7 @@ import Link from '@mui/material/Link';
 import useAuthStore from '@/stores/authStore';
 import { register, DEMO_TENANTS } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
+import { validateEmail, validatePassword } from '@/utils/validation';
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -23,26 +24,49 @@ function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const setFieldError = (field: string, err: string | null) => {
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      if (err) next[field] = err;
+      else delete next[field];
+      return next;
+    });
+  };
+
+  const validateField = (field: string, value: string): string | null => {
+    let err: string | null = null;
+    if (field === 'email') err = validateEmail(value);
+    if (field === 'password') {
+      err = validatePassword(value);
+      if (confirmPassword && value !== confirmPassword) {
+        setFieldError('confirmPassword', 'Passwords do not match.');
+      } else if (confirmPassword) {
+        setFieldError('confirmPassword', null);
+      }
+    }
+    if (field === 'confirmPassword') {
+      err = value !== password ? 'Passwords do not match.' : null;
+    }
+    setFieldError(field, err);
+    return err;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
+    const emailErr = validateField('email', email);
+    const passErr = validateField('password', password);
+    const confirmErr = validateField('confirmPassword', confirmPassword);
+    if (emailErr || passErr || confirmErr) return;
 
     setLoading(true);
 
     try {
       const res = await register({ tenantId, email, password, roles: ['IntakeWorker'] });
-      if (!res.success) {
+      if (res.error || !res.data) {
         setError(res.error?.message ?? 'Registration failed');
         return;
       }
@@ -113,6 +137,9 @@ function RegisterPage() {
               autoFocus
               value={email}
               onChange={e => setEmail(e.target.value)}
+              onBlur={() => validateField('email', email)}
+              error={!!fieldErrors.email}
+              helperText={fieldErrors.email}
             />
             <TextField
               label="Password"
@@ -121,7 +148,13 @@ function RegisterPage() {
               margin="normal"
               autoComplete="new-password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={e => {
+                setPassword(e.target.value);
+                validateField('password', e.target.value);
+              }}
+              onBlur={() => validateField('password', password)}
+              error={!!fieldErrors.password}
+              helperText={fieldErrors.password}
             />
             <TextField
               label="Confirm Password"
@@ -131,6 +164,9 @@ function RegisterPage() {
               autoComplete="new-password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
+              onBlur={() => validateField('confirmPassword', confirmPassword)}
+              error={!!fieldErrors.confirmPassword}
+              helperText={fieldErrors.confirmPassword}
             />
             <Button
               type="submit"
@@ -138,7 +174,7 @@ function RegisterPage() {
               fullWidth
               sx={{ mt: 3, mb: 2 }}
               size="large"
-              disabled={loading || !email || !password || !confirmPassword}
+              disabled={loading}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Register'}
             </Button>
