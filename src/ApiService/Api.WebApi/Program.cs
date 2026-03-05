@@ -159,6 +159,14 @@ builder.Services.AddTransient<RefreshTokenHandler>();
 builder.Services.AddApiMessaging(builder.Configuration);
 
 // ---------------------------------------------------------------------------
+// Database seeding (Development only)
+// ---------------------------------------------------------------------------
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHostedService<Api.WebApi.DevelopmentDbSeeder>();
+}
+
+// ---------------------------------------------------------------------------
 // Application
 // ---------------------------------------------------------------------------
 var app = builder.Build();
@@ -179,14 +187,6 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 app.MapControllers();
 
-// Seed demo data in Development
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<IntakeDbContext>();
-    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await Api.WebApi.DemoTenants.SeedAsync(db, hasher);
-}
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
