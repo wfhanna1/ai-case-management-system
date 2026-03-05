@@ -87,6 +87,7 @@ public sealed class LoginHandlerTests
     private sealed class StubTokenService : ITokenService
     {
         public string GenerateAccessToken(User user) => "access-token";
+        public int AccessTokenExpiryMinutes => 15;
         public string GenerateRefreshToken() => "refresh-token";
         public string HashRefreshToken(string rawToken) => "hashed-" + rawToken;
     }

@@ -104,10 +104,9 @@ public sealed class IntakeDbContext : DbContext
                 .IsUnique()
                 .HasDatabaseName("ix_users_tenant_email");
 
-            entity.HasQueryFilter(u =>
-                _tenantContext != null &&
-                _tenantContext.TenantId != null &&
-                u.TenantId == _tenantContext.TenantId);
+            // No global query filter on Users: auth endpoints (login, register, refresh)
+            // run without a tenant context. Tenant isolation is enforced by the explicit
+            // u.TenantId == tenantId predicate in EfUserRepository queries.
         });
     }
 }

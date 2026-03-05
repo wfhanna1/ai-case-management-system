@@ -102,6 +102,7 @@ public sealed class RefreshTokenHandlerTests
     private sealed class StubTokenService : ITokenService
     {
         public string GenerateAccessToken(User user) => "access-token";
+        public int AccessTokenExpiryMinutes => 15;
         public string GenerateRefreshToken() => "new-refresh-token";
         public string HashRefreshToken(string rawToken) => "hashed-" + rawToken;
     }

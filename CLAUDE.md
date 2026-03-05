@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 dotnet build                                          # Build entire solution
-dotnet test                                           # Run all tests (~67 tests)
+dotnet test                                           # Run all tests (~106 tests)
 dotnet test tests/SharedKernel.Tests                  # Run one test project
 dotnet test --filter "FullyQualifiedName~ClassName"   # Run single test class
 dotnet test --filter "DisplayName~test_method_name"   # Run single test method
@@ -76,7 +76,9 @@ React 19 + TypeScript + Vite SPA. MUI v6 for UI, React Query v5 for server state
 
 **Result\<T\> for error handling.** All port methods and handlers return `Result<T>`. No exceptions for business failures. Access `.Value` on success, `.Error` on failure. Use `Result<Unit>` for void operations.
 
-**Multi-tenancy.** All data access is scoped by `TenantId` (strongly-typed Guid wrapper). The API receives tenant ID via `X-Tenant-Id` header (GET) or form field (POST).
+**Multi-tenancy.** All data access is scoped by `TenantId` (strongly-typed Guid wrapper). Tenant is resolved from the JWT `tenant_id` claim via `TenantResolutionMiddleware`. EF Core global query filters enforce row-level isolation. `ITenantContext` (in SharedKernel) provides the ambient tenant for the request scope.
+
+**JWT Authentication.** BCrypt password hashing (work factor 12). JWT access tokens (15 min) with refresh token rotation (SHA-256 hashed, 7 day expiry). Authorization policies: RequireIntakeWorker, RequireReviewer, RequireAdmin. Auth endpoints (`/api/auth/*`) are exempt from tenant middleware.
 
 **Port interfaces live in Domain.** Adapters (EF Core repos, file storage, message bus) implement port interfaces and are registered in the composition root. Dependencies point inward.
 
@@ -96,3 +98,9 @@ React 19 + TypeScript + Vite SPA. MUI v6 for UI, React Query v5 for server state
 - Domain aggregates use static factory methods (e.g., `IntakeDocument.Submit(...)`)
 - No `async void`; all async methods return `Task` or `Task<T>`
 - CI runs on PR to main: `dotnet restore/build/test` + `npm ci/lint/build`
+
+---
+
+## Workflow
+
+**After completing each story:** Go back and review the issue's acceptance criteria. Verify each item is truly complete, then check off the completed items on the GitHub issue. Do not mark items complete unless you have verified them.
