@@ -1,3 +1,4 @@
+using Api.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -47,6 +48,11 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+// ---------------------------------------------------------------------------
+// Messaging -- RabbitMQ via MassTransit (12-factor: config from env)
+// ---------------------------------------------------------------------------
+builder.Services.AddApiMessaging(builder.Configuration);
 
 // ---------------------------------------------------------------------------
 // Application
