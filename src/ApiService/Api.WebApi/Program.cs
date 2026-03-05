@@ -146,6 +146,7 @@ builder.Services.AddDbContext<IntakeDbContext>(options =>
 builder.Services.AddTransient<IDocumentRepository, EfDocumentRepository>();
 builder.Services.AddTransient<IFormTemplateRepository, EfFormTemplateRepository>();
 builder.Services.AddTransient<IUserRepository, EfUserRepository>();
+builder.Services.AddTransient<IAuditLogRepository, EfAuditLogRepository>();
 builder.Services.AddTransient<IFileStoragePort>(_ =>
     new LocalFileStorageAdapter(storagePath));
 
@@ -167,6 +168,12 @@ builder.Services.AddTransient<RefreshTokenHandler>();
 builder.Services.AddTransient<CreateFormTemplateHandler>();
 builder.Services.AddTransient<GetFormTemplateByIdHandler>();
 builder.Services.AddTransient<ListFormTemplatesByTenantHandler>();
+builder.Services.AddTransient<ListPendingReviewHandler>();
+builder.Services.AddTransient<GetDocumentReviewHandler>();
+builder.Services.AddTransient<StartReviewHandler>();
+builder.Services.AddTransient<CorrectFieldHandler>();
+builder.Services.AddTransient<FinalizeReviewHandler>();
+builder.Services.AddTransient<GetAuditTrailHandler>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)

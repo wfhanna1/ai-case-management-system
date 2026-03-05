@@ -9,20 +9,23 @@ namespace Api.Infrastructure.Messaging;
 
 /// <summary>
 /// Consumes DocumentProcessedEvent from the OCR worker and updates the
-/// corresponding IntakeDocument status to Completed.
+/// corresponding IntakeDocument status to PendingReview with extracted fields stored.
 /// Uses FindByIdUnfilteredAsync because background consumers have no ambient
 /// tenant context; manual tenant verification is performed from the event payload.
 /// </summary>
 public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent>
 {
     private readonly IDocumentRepository _repository;
+    private readonly IAuditLogRepository _auditLogRepository;
     private readonly ILogger<DocumentProcessedConsumer> _logger;
 
     public DocumentProcessedConsumer(
         IDocumentRepository repository,
+        IAuditLogRepository auditLogRepository,
         ILogger<DocumentProcessedConsumer> logger)
     {
         _repository = repository;
+        _auditLogRepository = auditLogRepository;
         _logger = logger;
     }
 
@@ -35,6 +38,7 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
             message.DocumentId,
             message.TenantId,
             message.ExtractedFields.Count);
+
 
         var findResult = await _repository.FindByIdUnfilteredAsync(
             new DocumentId(message.DocumentId),
@@ -66,6 +70,11 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
             return;
         }
 
+        // Map extracted fields from the event message (dictionary keyed by field name).
+        var extractedFields = message.ExtractedFields
+            .Select(kvp => new ExtractedField(kvp.Key, kvp.Value.Value, kvp.Value.Confidence))
+            .ToList();
+
         // Transition: Submitted -> Processing -> Completed.
         // MarkProcessing may fail if already Processing (idempotent retry); that is acceptable.
         var processingResult = document.MarkProcessing();
@@ -76,12 +85,21 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
                 $"(Status={document.Status}): {processingResult.Error.Message}");
         }
 
-        var completedResult = document.MarkCompleted();
+        var completedResult = document.MarkCompleted(extractedFields);
         if (completedResult.IsFailure)
         {
             throw new InvalidOperationException(
                 $"Could not mark document {message.DocumentId} as Completed: " +
                 completedResult.Error.Message);
+        }
+
+        // Transition to PendingReview so reviewers can act on the document.
+        var pendingReviewResult = document.MarkPendingReview();
+        if (pendingReviewResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Could not mark document {message.DocumentId} as PendingReview: " +
+                pendingReviewResult.Error.Message);
         }
 
         var saveResult = await _repository.UpdateAsync(document, context.CancellationToken);
@@ -91,8 +109,20 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
                 $"Failed to save document {message.DocumentId}: {saveResult.Error.Message}");
         }
 
+        // Record audit entry for extraction completion.
+        var tenantId = new TenantId(message.TenantId);
+        var documentId = new DocumentId(message.DocumentId);
+        var auditEntry = AuditLogEntry.RecordExtractionCompleted(tenantId, documentId);
+        var auditResult = await _auditLogRepository.SaveAsync(auditEntry, context.CancellationToken);
+        if (auditResult.IsFailure)
+        {
+            _logger.LogWarning(
+                "Audit log entry for extraction of document {DocumentId} could not be saved: {Error}",
+                message.DocumentId, auditResult.Error.Message);
+        }
+
         _logger.LogInformation(
-            "Document marked as Completed. DocumentId={DocumentId}",
-            message.DocumentId);
+            "Document marked as PendingReview with {FieldCount} extracted fields. DocumentId={DocumentId}",
+            extractedFields.Count, message.DocumentId);
     }
 }

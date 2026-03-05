@@ -11,6 +11,7 @@ public sealed class IntakeDbContext : DbContext
     public DbSet<IntakeDocument> Documents => Set<IntakeDocument>();
     public DbSet<User> Users => Set<User>();
     public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
+    public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     /// <summary>
     /// Used by EF Core tooling (dotnet ef migrations) when no tenant context is available.
@@ -54,6 +55,24 @@ public sealed class IntakeDbContext : DbContext
             entity.Property(d => d.Status).HasColumnName("status").HasConversion<string>();
             entity.Property(d => d.SubmittedAt).HasColumnName("submitted_at");
             entity.Property(d => d.ProcessedAt).HasColumnName("processed_at");
+
+            entity.Property(d => d.ReviewedBy)
+                .HasConversion(
+                    id => id == null ? (Guid?)null : id.Value,
+                    value => value == null ? null : new UserId(value.Value))
+                .HasColumnName("reviewed_by");
+
+            entity.Property(d => d.ReviewedAt).HasColumnName("reviewed_at");
+
+            entity.Navigation(d => d.ExtractedFields).HasField("_extractedFields");
+            entity.OwnsMany(d => d.ExtractedFields, fields =>
+            {
+                fields.ToJson("extracted_fields");
+                fields.Property(f => f.Name).HasJsonPropertyName("name");
+                fields.Property(f => f.Value).HasJsonPropertyName("value");
+                fields.Property(f => f.Confidence).HasJsonPropertyName("confidence");
+                fields.Property(f => f.CorrectedValue).HasJsonPropertyName("correctedValue");
+            });
 
             entity.HasIndex(d => d.TenantId).HasDatabaseName("ix_documents_tenant_id");
 
@@ -152,6 +171,52 @@ public sealed class IntakeDbContext : DbContext
                 _tenantContext != null &&
                 _tenantContext.TenantId != null &&
                 t.TenantId == _tenantContext.TenantId);
+        });
+
+        modelBuilder.Entity<AuditLogEntry>(entity =>
+        {
+            entity.ToTable("audit_log");
+
+            entity.HasKey(a => a.Id);
+
+            entity.Property(a => a.Id)
+                .HasColumnName("id");
+
+            entity.Property(a => a.TenantId)
+                .HasConversion(
+                    id => id.Value,
+                    value => new TenantId(value))
+                .HasColumnName("tenant_id");
+
+            entity.Property(a => a.DocumentId)
+                .HasConversion(
+                    id => id.Value,
+                    value => new DocumentId(value))
+                .HasColumnName("document_id");
+
+            entity.Property(a => a.Action)
+                .HasColumnName("action")
+                .HasConversion<string>()
+                .HasMaxLength(64);
+
+            entity.Property(a => a.PerformedBy)
+                .HasConversion(
+                    id => id == null ? (Guid?)null : id.Value,
+                    value => value == null ? null : new UserId(value.Value))
+                .HasColumnName("performed_by");
+
+            entity.Property(a => a.Timestamp).HasColumnName("timestamp");
+            entity.Property(a => a.FieldName).HasColumnName("field_name").HasMaxLength(256);
+            entity.Property(a => a.PreviousValue).HasColumnName("previous_value").HasMaxLength(2000);
+            entity.Property(a => a.NewValue).HasColumnName("new_value").HasMaxLength(2000);
+
+            entity.HasIndex(a => new { a.TenantId, a.DocumentId })
+                .HasDatabaseName("ix_audit_log_tenant_document");
+
+            entity.HasQueryFilter(a =>
+                _tenantContext != null &&
+                _tenantContext.TenantId != null &&
+                a.TenantId == _tenantContext.TenantId);
         });
     }
 }

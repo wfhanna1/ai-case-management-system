@@ -70,6 +70,26 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
     }
 
+    public async Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusAsync(
+        TenantId tenantId, DocumentStatus status, int page, int pageSize, CancellationToken ct = default)
+    {
+        try
+        {
+            var documents = await _db.Documents
+                .Where(d => d.TenantId == tenantId && d.Status == status)
+                .OrderByDescending(d => d.ProcessedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+            return Result<IReadOnlyList<IntakeDocument>>.Success(documents);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list documents by status {Status} for tenant {TenantId}", status, tenantId.Value);
+            return Result<IReadOnlyList<IntakeDocument>>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
     public async Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default)
     {
         try

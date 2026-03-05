@@ -147,8 +147,10 @@ public sealed class DevelopmentDbSeeder : IHostedService
         db.Users.AddRange(
             User.Register(alpha, "admin@alpha.demo", hash, [UserRole.Admin]),
             User.Register(alpha, "worker@alpha.demo", hash, [UserRole.IntakeWorker]),
+            User.Register(alpha, "reviewer@alpha.demo", hash, [UserRole.Reviewer]),
             User.Register(beta, "admin@beta.demo", hash, [UserRole.Admin]),
-            User.Register(beta, "worker@beta.demo", hash, [UserRole.IntakeWorker])
+            User.Register(beta, "worker@beta.demo", hash, [UserRole.IntakeWorker]),
+            User.Register(beta, "reviewer@beta.demo", hash, [UserRole.Reviewer])
         );
 
         await db.SaveChangesAsync();
