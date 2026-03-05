@@ -184,7 +184,8 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<IntakeDbContext>();
-    await Api.WebApi.DemoTenants.SeedAsync(db);
+    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    await Api.WebApi.DemoTenants.SeedAsync(db, hasher);
 }
 
 app.MapHealthChecks("/health", new HealthCheckOptions
