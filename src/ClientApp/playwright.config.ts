@@ -1,7 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
   timeout: 30000,
   retries: 0,
   use: {
@@ -14,4 +13,19 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 30000,
   },
+  projects: [
+    {
+      name: 'isolation',
+      testDir: './e2e/isolation',
+    },
+    {
+      name: 'pipeline',
+      testDir: './e2e/pipeline',
+    },
+    {
+      name: 'e2e',
+      testDir: './e2e',
+      testIgnore: ['**/isolation/**', '**/pipeline/**'],
+    },
+  ],
 });
