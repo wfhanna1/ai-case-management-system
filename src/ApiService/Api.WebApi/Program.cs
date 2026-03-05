@@ -1,5 +1,10 @@
+using Api.Application.Commands;
+using Api.Domain.Ports;
 using Api.Infrastructure.Messaging;
+using Api.Infrastructure.Persistence;
+using Api.Infrastructure.Storage;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,9 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 // ---------------------------------------------------------------------------
 // Configuration -- all from environment/config, never hardcoded (12-factor)
 // ---------------------------------------------------------------------------
-var connectionString = builder.Configuration.GetConnectionString("Postgres")
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
-        "Missing required configuration: ConnectionStrings__Postgres");
+        "Missing required configuration: ConnectionStrings__DefaultConnection");
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -48,6 +53,21 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+// ---------------------------------------------------------------------------
+// Persistence -- EF Core + PostgreSQL
+// ---------------------------------------------------------------------------
+builder.Services.AddDbContext<IntakeDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+builder.Services.AddTransient<IDocumentRepository, EfDocumentRepository>();
+builder.Services.AddTransient<IFileStoragePort>(_ =>
+    new LocalFileStorageAdapter(Path.Combine(Directory.GetCurrentDirectory(), "storage")));
+
+// ---------------------------------------------------------------------------
+// Application services
+// ---------------------------------------------------------------------------
+builder.Services.AddTransient<SubmitDocumentHandler>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)
