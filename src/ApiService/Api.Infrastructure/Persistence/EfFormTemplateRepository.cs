@@ -56,7 +56,9 @@ public sealed class EfFormTemplateRepository : IFormTemplateRepository
     {
         try
         {
-            _db.FormTemplates.Add(template);
+            var entry = _db.Entry(template);
+            if (entry.State == EntityState.Detached)
+                _db.FormTemplates.Add(template);
             await _db.SaveChangesAsync(ct);
             return Result<Unit>.Success(Unit.Value);
         }

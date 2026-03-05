@@ -13,7 +13,9 @@ public sealed class CreateFormTemplateRequestValidator : AbstractValidator<Creat
             .MaximumLength(256).WithMessage("Template name must not exceed 256 characters.");
 
         RuleFor(x => x.Type)
-            .NotEmpty().WithMessage("Template type is required.");
+            .NotEmpty().WithMessage("Template type is required.")
+            .Must(t => Enum.TryParse<TemplateType>(t, out _))
+            .WithMessage("'{PropertyValue}' is not a valid template type.");
 
         RuleFor(x => x.Description)
             .MaximumLength(2000).WithMessage("Description must not exceed 2000 characters.");
