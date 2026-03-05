@@ -52,10 +52,9 @@ public sealed class SubmitDocumentHandler
 
         if (publishResult.IsFailure)
         {
-            _logger.LogError(
-                "Failed to publish DocumentUploadedEvent for document {DocumentId}: {Error}",
+            _logger.LogWarning(
+                "Failed to publish DocumentUploadedEvent for document {DocumentId}: {Error}. Document saved successfully; event will need retry.",
                 document.Id.Value, publishResult.Error.Message);
-            return Result<DocumentDto>.Failure(publishResult.Error);
         }
 
         return Result<DocumentDto>.Success(new DocumentDto(

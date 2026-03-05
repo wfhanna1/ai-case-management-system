@@ -75,9 +75,6 @@ public sealed class DocumentsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-
         var result = await _listHandler.HandleAsync(tenantId, page, pageSize, ct);
 
         if (result.IsFailure)

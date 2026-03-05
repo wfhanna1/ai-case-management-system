@@ -57,18 +57,7 @@ public sealed class EfDocumentRepository : IDocumentRepository
     {
         try
         {
-            var exists = await _db.Documents
-                .AnyAsync(d => d.Id == document.Id, ct);
-
-            if (exists)
-            {
-                _db.Documents.Update(document);
-            }
-            else
-            {
-                _db.Documents.Add(document);
-            }
-
+            _db.Documents.Add(document);
             await _db.SaveChangesAsync(ct);
             return Result<Unit>.Success(Unit.Value);
         }

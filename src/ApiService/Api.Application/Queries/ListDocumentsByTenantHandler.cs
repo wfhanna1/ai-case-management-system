@@ -16,6 +16,9 @@ public sealed class ListDocumentsByTenantHandler
     public async Task<Result<IReadOnlyList<DocumentDto>>> HandleAsync(
         Guid tenantId, int page, int pageSize, CancellationToken ct = default)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         var result = await _repository.ListByTenantAsync(
             new TenantId(tenantId), page, pageSize, ct);
 
