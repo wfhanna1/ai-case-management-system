@@ -1,15 +1,22 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Chip from '@mui/material/Chip';
 import DescriptionIcon from '@mui/icons-material/Description';
 import useAuthStore from '@/stores/authStore';
 
 function MainLayout() {
+  const navigate = useNavigate();
   const { isAuthenticated, user, clearAuth } = useAuthStore();
+
+  const handleSignOut = () => {
+    clearAuth();
+    navigate('/login');
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -21,15 +28,24 @@ function MainLayout() {
           </Typography>
           {isAuthenticated && user ? (
             <>
-              <Typography variant="body2" sx={{ mr: 2 }}>
-                {user.displayName}
+              <Typography variant="body2" sx={{ mr: 1 }}>
+                {user.email}
               </Typography>
-              <Button color="inherit" onClick={clearAuth}>
+              {user.roles.map(role => (
+                <Chip
+                  key={role}
+                  label={role}
+                  size="small"
+                  color="secondary"
+                  sx={{ mr: 1 }}
+                />
+              ))}
+              <Button color="inherit" onClick={handleSignOut}>
                 Sign Out
               </Button>
             </>
           ) : (
-            <Button color="inherit" href="/login">
+            <Button color="inherit" onClick={() => navigate('/login')}>
               Sign In
             </Button>
           )}
