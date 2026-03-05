@@ -19,14 +19,6 @@ interface ApiResponse<T> {
   };
 }
 
-interface PaginatedResult<T> {
-  items: T[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-}
-
 export async function uploadDocument(
   file: File,
   templateId?: string
@@ -45,24 +37,12 @@ export async function uploadDocument(
   return res.data;
 }
 
-export async function getDocuments(
-  page: number,
-  pageSize: number
-): Promise<PaginatedResult<DocumentDto>> {
-  const res = await api.get<ApiResponse<DocumentDto[]>>(
-    `/documents?page=${page}&pageSize=${pageSize}`
-  );
+export async function getDocuments(): Promise<DocumentDto[]> {
+  const res = await api.get<ApiResponse<DocumentDto[]>>('/documents');
   if (res.data.error) {
     throw new Error(res.data.error.message);
   }
-  const items = res.data.data ?? [];
-  return {
-    items,
-    totalCount: items.length,
-    pageNumber: page,
-    pageSize,
-    totalPages: 1,
-  };
+  return res.data.data ?? [];
 }
 
 export async function getDocument(id: string): Promise<DocumentDto> {

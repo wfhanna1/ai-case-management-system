@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -9,7 +8,6 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TablePagination from '@mui/material/TablePagination';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -28,12 +26,9 @@ function formatDate(dateStr: string | null): string {
 }
 
 function DocumentsPage() {
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['documents', page + 1, pageSize],
-    queryFn: () => getDocuments(page + 1, pageSize),
+    queryKey: ['documents'],
+    queryFn: () => getDocuments(),
     refetchInterval: 5000,
   });
 
@@ -67,8 +62,8 @@ function DocumentsPage() {
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : data && data.items.length > 0 ? (
-                data.items.map(doc => (
+              ) : data && data.length > 0 ? (
+                data.map(doc => (
                   <TableRow key={doc.id}>
                     <TableCell>{doc.originalFileName}</TableCell>
                     <TableCell>
@@ -92,20 +87,6 @@ function DocumentsPage() {
             </TableBody>
           </Table>
         </TableContainer>
-        {data && data.totalCount > 0 && (
-          <TablePagination
-            component="div"
-            count={data.totalCount}
-            page={page}
-            onPageChange={(_, newPage) => setPage(newPage)}
-            rowsPerPage={pageSize}
-            onRowsPerPageChange={e => {
-              setPageSize(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            rowsPerPageOptions={[5, 10, 25]}
-          />
-        )}
       </Paper>
     </Box>
   );

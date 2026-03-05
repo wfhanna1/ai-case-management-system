@@ -33,6 +33,23 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
     }
 
+    public async Task<Result<IntakeDocument?>> FindByIdUnfilteredAsync(
+        DocumentId id, CancellationToken ct = default)
+    {
+        try
+        {
+            var document = await _db.Documents
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(d => d.Id == id, ct);
+            return Result<IntakeDocument?>.Success(document);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to find document {DocumentId} (unfiltered)", id.Value);
+            return Result<IntakeDocument?>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
     public async Task<Result<IReadOnlyList<IntakeDocument>>> ListByTenantAsync(
         TenantId tenantId, int page, int pageSize, CancellationToken ct = default)
     {
@@ -64,6 +81,21 @@ public sealed class EfDocumentRepository : IDocumentRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save document {DocumentId}", document.Id.Value);
+            return Result<Unit>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
+    public async Task<Result<Unit>> UpdateAsync(IntakeDocument document, CancellationToken ct = default)
+    {
+        try
+        {
+            _db.Documents.Update(document);
+            await _db.SaveChangesAsync(ct);
+            return Result<Unit>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update document {DocumentId}", document.Id.Value);
             return Result<Unit>.Failure(new Error("DB_ERROR", "An internal error occurred"));
         }
     }

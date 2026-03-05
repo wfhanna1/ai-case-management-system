@@ -1,8 +1,7 @@
 using Api.Domain.Aggregates;
-using Api.Infrastructure.Persistence;
+using Api.Domain.Ports;
 using MassTransit;
 using Messaging.Contracts.Events;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
 
@@ -11,18 +10,19 @@ namespace Api.Infrastructure.Messaging;
 /// <summary>
 /// Consumes DocumentProcessedEvent from the OCR worker and updates the
 /// corresponding IntakeDocument status to Completed.
-/// Uses IgnoreQueryFilters because background consumers have no tenant context.
+/// Uses FindByIdUnfilteredAsync because background consumers have no ambient
+/// tenant context; manual tenant verification is performed from the event payload.
 /// </summary>
 public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent>
 {
-    private readonly IntakeDbContext _dbContext;
+    private readonly IDocumentRepository _repository;
     private readonly ILogger<DocumentProcessedConsumer> _logger;
 
     public DocumentProcessedConsumer(
-        IntakeDbContext dbContext,
+        IDocumentRepository repository,
         ILogger<DocumentProcessedConsumer> logger)
     {
-        _dbContext = dbContext;
+        _repository = repository;
         _logger = logger;
     }
 
@@ -36,11 +36,17 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
             message.TenantId,
             message.ExtractedFields.Count);
 
-        var document = await _dbContext.Documents
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                d => d.Id == new DocumentId(message.DocumentId),
-                context.CancellationToken);
+        var findResult = await _repository.FindByIdUnfilteredAsync(
+            new DocumentId(message.DocumentId),
+            context.CancellationToken);
+
+        if (findResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Failed to look up document {message.DocumentId}: {findResult.Error.Message}");
+        }
+
+        var document = findResult.Value;
 
         if (document is null)
         {
@@ -65,25 +71,25 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
         var processingResult = document.MarkProcessing();
         if (processingResult.IsFailure && document.Status != DocumentStatus.Processing)
         {
-            _logger.LogError(
-                "Could not mark document as Processing. DocumentId={DocumentId} Status={Status} Error={Error}",
-                message.DocumentId,
-                document.Status,
-                processingResult.Error.Message);
-            return;
+            throw new InvalidOperationException(
+                $"Could not mark document {message.DocumentId} as Processing " +
+                $"(Status={document.Status}): {processingResult.Error.Message}");
         }
 
         var completedResult = document.MarkCompleted();
         if (completedResult.IsFailure)
         {
-            _logger.LogError(
-                "Could not mark document as Completed. DocumentId={DocumentId} Error={Error}",
-                message.DocumentId,
+            throw new InvalidOperationException(
+                $"Could not mark document {message.DocumentId} as Completed: " +
                 completedResult.Error.Message);
-            return;
         }
 
-        await _dbContext.SaveChangesAsync(context.CancellationToken);
+        var saveResult = await _repository.UpdateAsync(document, context.CancellationToken);
+        if (saveResult.IsFailure)
+        {
+            throw new InvalidOperationException(
+                $"Failed to save document {message.DocumentId}: {saveResult.Error.Message}");
+        }
 
         _logger.LogInformation(
             "Document marked as Completed. DocumentId={DocumentId}",
