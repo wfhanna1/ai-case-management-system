@@ -28,6 +28,12 @@ function MainLayout() {
           </Typography>
           {isAuthenticated && user ? (
             <>
+              <Button color="inherit" onClick={() => navigate('/dashboard')} sx={{ mr: 1 }}>
+                Dashboard
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/templates')} sx={{ mr: 2 }}>
+                Templates
+              </Button>
               <Typography variant="body2" sx={{ mr: 1 }}>
                 {user.email}
               </Typography>

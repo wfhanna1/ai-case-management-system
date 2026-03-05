@@ -1,3 +1,4 @@
+import axios from 'axios';
 import api from './api';
 
 export interface AuthResponse {
@@ -35,13 +36,27 @@ export const DEMO_TENANTS = [
 ];
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  const res = await api.post<AuthResponse>('/auth/login', payload);
-  return res.data;
+  try {
+    const res = await api.post<AuthResponse>('/auth/login', payload);
+    return res.data;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      return err.response.data as AuthResponse;
+    }
+    throw err;
+  }
 }
 
 export async function register(payload: RegisterPayload): Promise<AuthResponse> {
-  const res = await api.post<AuthResponse>('/auth/register', payload);
-  return res.data;
+  try {
+    const res = await api.post<AuthResponse>('/auth/register', payload);
+    return res.data;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      return err.response.data as AuthResponse;
+    }
+    throw err;
+  }
 }
 
 export async function refreshToken(payload: RefreshPayload): Promise<AuthResponse> {

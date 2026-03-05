@@ -10,6 +10,7 @@ public sealed class IntakeDbContext : DbContext
 
     public DbSet<IntakeDocument> Documents => Set<IntakeDocument>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
 
     /// <summary>
     /// Used by EF Core tooling (dotnet ef migrations) when no tenant context is available.
@@ -107,6 +108,50 @@ public sealed class IntakeDbContext : DbContext
             // No global query filter on Users: auth endpoints (login, register, refresh)
             // run without a tenant context. Tenant isolation is enforced by the explicit
             // u.TenantId == tenantId predicate in EfUserRepository queries.
+        });
+
+        modelBuilder.Entity<FormTemplate>(entity =>
+        {
+            entity.Ignore(t => t.DomainEvents);
+            entity.ToTable("form_templates");
+
+            entity.HasKey(t => t.Id);
+
+            entity.Property(t => t.Id)
+                .HasConversion(
+                    id => id.Value,
+                    value => new FormTemplateId(value))
+                .HasColumnName("id");
+
+            entity.Property(t => t.TenantId)
+                .HasConversion(
+                    id => id.Value,
+                    value => new TenantId(value))
+                .HasColumnName("tenant_id");
+
+            entity.Property(t => t.Name).HasColumnName("name").HasMaxLength(256);
+            entity.Property(t => t.Description).HasColumnName("description").HasMaxLength(2000);
+            entity.Property(t => t.Type).HasColumnName("type").HasConversion<string>().HasMaxLength(64);
+            entity.Property(t => t.IsActive).HasColumnName("is_active");
+            entity.Property(t => t.CreatedAt).HasColumnName("created_at");
+            entity.Property(t => t.UpdatedAt).HasColumnName("updated_at");
+
+            entity.Navigation(t => t.Fields).HasField("_fields");
+            entity.OwnsMany(t => t.Fields, fields =>
+            {
+                fields.ToJson("fields");
+                fields.Property(f => f.Label).HasJsonPropertyName("label");
+                fields.Property(f => f.FieldType).HasJsonPropertyName("fieldType").HasConversion<string>();
+                fields.Property(f => f.IsRequired).HasJsonPropertyName("isRequired");
+                fields.Property(f => f.Options).HasJsonPropertyName("options");
+            });
+
+            entity.HasIndex(t => t.TenantId).HasDatabaseName("ix_form_templates_tenant_id");
+
+            entity.HasQueryFilter(t =>
+                _tenantContext != null &&
+                _tenantContext.TenantId != null &&
+                t.TenantId == _tenantContext.TenantId);
         });
     }
 }

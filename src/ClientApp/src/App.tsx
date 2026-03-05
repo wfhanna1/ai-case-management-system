@@ -4,6 +4,8 @@ import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
+import TemplatesPage from '@/pages/TemplatesPage';
+import TemplateDetailPage from '@/pages/TemplateDetailPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 function App() {
@@ -18,6 +20,22 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates"
+          element={
+            <ProtectedRoute>
+              <TemplatesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates/:id"
+          element={
+            <ProtectedRoute>
+              <TemplateDetailPage />
             </ProtectedRoute>
           }
         />
