@@ -64,19 +64,19 @@ export async function mockGetReviewDocument(page: Page, doc: ReviewDocumentDto) 
 
 export async function mockStartReview(page: Page, docId: string) {
   await page.route(`**/api/reviews/${docId}/start`, route =>
-    route.fulfill({ status: 204 })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({})) })
   );
 }
 
 export async function mockCorrectField(page: Page, docId: string) {
   await page.route(`**/api/reviews/${docId}/correct-field`, route =>
-    route.fulfill({ status: 204 })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({})) })
   );
 }
 
 export async function mockFinalizeReview(page: Page, docId: string) {
   await page.route(`**/api/reviews/${docId}/finalize`, route =>
-    route.fulfill({ status: 204 })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({})) })
   );
 }
 

@@ -91,7 +91,7 @@ public sealed class ReviewController : ControllerBase
             };
         }
 
-        return NoContent();
+        return Ok(ApiResponse<object>.Ok(new { }));
     }
 
     [HttpPost("{documentId:guid}/correct-field")]
@@ -119,7 +119,7 @@ public sealed class ReviewController : ControllerBase
             };
         }
 
-        return NoContent();
+        return Ok(ApiResponse<object>.Ok(new { }));
     }
 
     [HttpPost("{documentId:guid}/finalize")]
@@ -142,7 +142,7 @@ public sealed class ReviewController : ControllerBase
             };
         }
 
-        return NoContent();
+        return Ok(ApiResponse<object>.Ok(new { }));
     }
 
     [HttpGet("{documentId:guid}/audit")]
