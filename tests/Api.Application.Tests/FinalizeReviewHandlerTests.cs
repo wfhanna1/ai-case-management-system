@@ -48,7 +48,7 @@ public sealed class FinalizeReviewHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_from_PendingReview_starts_and_finalizes()
+    public async Task HandleAsync_from_PendingReview_starts_and_finalizes_with_both_audit_entries()
     {
         var tenantId = TenantId.New();
         var reviewerId = UserId.New();
@@ -60,6 +60,9 @@ public sealed class FinalizeReviewHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(DocumentStatus.Finalized, doc.Status);
+        Assert.Equal(2, _auditRepo.SavedEntries.Count);
+        Assert.Equal(AuditAction.ReviewStarted, _auditRepo.SavedEntries[0].Action);
+        Assert.Equal(AuditAction.ReviewFinalized, _auditRepo.SavedEntries[1].Action);
     }
 
     [Fact]
@@ -126,11 +129,12 @@ public sealed class FinalizeReviewHandlerTests
 
     private sealed class StubAuditLogRepository : IAuditLogRepository
     {
-        public AuditLogEntry? SavedEntry { get; private set; }
+        public AuditLogEntry? SavedEntry => SavedEntries.LastOrDefault();
+        public List<AuditLogEntry> SavedEntries { get; } = [];
 
         public Task<Result<Unit>> SaveAsync(AuditLogEntry entry, CancellationToken ct = default)
         {
-            SavedEntry = entry;
+            SavedEntries.Add(entry);
             return Task.FromResult(Result<Unit>.Success(Unit.Value));
         }
 

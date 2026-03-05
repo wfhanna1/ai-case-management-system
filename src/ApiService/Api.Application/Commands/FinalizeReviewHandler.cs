@@ -40,12 +40,21 @@ public sealed class FinalizeReviewHandler
 
         var document = findResult.Value;
 
-        // If document is still PendingReview, start the review first.
+        // If document is still PendingReview, start the review first and record it.
         if (document.Status == DocumentStatus.PendingReview)
         {
             var startResult = document.StartReview(reviewerId);
             if (startResult.IsFailure)
                 return Result<Unit>.Failure(startResult.Error);
+
+            var startAudit = AuditLogEntry.RecordReviewStarted(tid, did, reviewerId);
+            var startAuditResult = await _auditLogRepository.SaveAsync(startAudit, ct);
+            if (startAuditResult.IsFailure)
+            {
+                _logger.LogWarning(
+                    "Audit log entry for auto-start of review on document {DocumentId} could not be saved: {Error}",
+                    documentId, startAuditResult.Error.Message);
+            }
         }
 
         var finalizeResult = document.Finalize(reviewerId);
