@@ -36,6 +36,15 @@ public sealed class CreateFormTemplateRequestValidatorTests
     }
 
     [Fact]
+    public void Invalid_type_fails()
+    {
+        var request = new CreateFormTemplateRequest("Name", "Desc", "NotARealType", []);
+        var result = _validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.Type)
+              .WithErrorMessage("'NotARealType' is not a valid template type.");
+    }
+
+    [Fact]
     public void Description_exceeding_max_length_fails()
     {
         var longDesc = new string('x', 2001);
