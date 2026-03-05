@@ -35,6 +35,17 @@ docker compose up --build
 
 Services: API (:5000), Frontend (:3000), PostgreSQL (:5432), RabbitMQ (:5672/:15672), Qdrant (:6333/:6334).
 
+### Demo Credentials
+
+Seeded automatically in Development via `DevelopmentDbSeeder`. Password for all: `Demo123!`
+
+| Email | Role | Tenant |
+|-------|------|--------|
+| admin@alpha.demo | Admin | Alpha Clinic |
+| worker@alpha.demo | IntakeWorker | Alpha Clinic |
+| admin@beta.demo | Admin | Beta Hospital |
+| worker@beta.demo | IntakeWorker | Beta Hospital |
+
 ---
 
 ## Architecture
