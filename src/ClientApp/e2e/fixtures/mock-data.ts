@@ -221,6 +221,7 @@ export interface SimilarCaseDto {
   score: number;
   summary: string;
   metadata: Record<string, string>;
+  sharedFields: Record<string, string>;
 }
 
 export interface SimilarCasesResultDto {
@@ -237,6 +238,9 @@ export function createSimilarCaseDto(overrides: Partial<SimilarCaseDto> = {}): S
       Type: 'ChildWelfare',
       ReasonForReferral: 'Physical abuse suspected',
       Age: '8',
+    },
+    sharedFields: {
+      ChildName: 'Alice Johnson',
     },
     ...overrides,
   };

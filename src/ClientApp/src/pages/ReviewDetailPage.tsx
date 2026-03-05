@@ -384,6 +384,25 @@ function ReviewDetailPage() {
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     {item.summary}
                   </Typography>
+                  {item.sharedFields && Object.keys(item.sharedFields).length > 0 && (
+                    <Box sx={{ mb: 1 }} data-testid={`shared-fields-${item.documentId}`}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        Matched on:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {Object.entries(item.sharedFields).map(([key, value]) => (
+                          <Chip
+                            key={key}
+                            label={`${key}: ${value}`}
+                            size="small"
+                            variant="outlined"
+                            color="info"
+                            data-testid={`shared-field-${item.documentId}-${key}`}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
                   {Object.keys(item.metadata).length > 0 && (
                     <Accordion variant="outlined" disableGutters>
                       <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36 }}>

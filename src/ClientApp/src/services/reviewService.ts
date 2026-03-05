@@ -97,6 +97,7 @@ export interface SimilarCaseDto {
   score: number;
   summary: string;
   metadata: Record<string, string>;
+  sharedFields: Record<string, string>;
 }
 
 export interface SimilarCasesResultDto {

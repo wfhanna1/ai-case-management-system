@@ -65,15 +65,68 @@ reviewerTest.describe('Similar cases panel (isolation)', () => {
     await expect(reviewerPage.getByTestId('no-similar-cases')).toBeVisible();
   });
 
-  reviewerTest('shows expandable field details', async ({ reviewerPage }) => {
+  reviewerTest('shows shared fields as chips when present', async ({ reviewerPage }) => {
     const doc = createReviewDocumentDto({ status: 'InReview' });
     const id1 = '33333333-3333-3333-3333-333333333333';
+    const similarData = {
+      items: [
+        {
+          documentId: id1,
+          score: 0.92,
+          summary: 'Subject: Test Patient. Category: ChildWelfare.',
+          metadata: { ChildName: 'Test Patient', Age: '8', ReasonForReferral: 'Neglect' },
+          sharedFields: { ChildName: 'Test Patient', Age: '8' },
+        },
+      ],
+    };
+
+    // Set up similar-cases mock BEFORE the review doc mock to avoid override issues
+    await reviewerPage.route(`**/api/reviews/${doc.id}/similar-cases`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: similarData, error: null }),
+      })
+    );
+    await reviewerPage.route(`**/api/reviews/${doc.id}`, route => {
+      if (route.request().url().includes('/similar-cases') ||
+          route.request().url().includes('/audit') ||
+          route.request().url().includes('/start')) {
+        return route.continue();
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: doc, error: null }),
+      });
+    });
+
+    await reviewerPage.goto(`/reviews/${doc.id}`);
+
+    // Expand similar cases panel
+    await reviewerPage.getByText('Similar Cases').click();
+
+    // Wait for similar case card to be visible (accordion expanded)
+    await expect(reviewerPage.getByTestId(`similar-case-${id1}`)).toBeVisible();
+
+    // Shared fields should be visible as chips
+    const sharedFieldsContainer = reviewerPage.getByTestId(`shared-fields-${id1}`);
+    await expect(sharedFieldsContainer).toBeVisible();
+    await expect(sharedFieldsContainer.getByText('Matched on:')).toBeVisible();
+    await expect(reviewerPage.getByTestId(`shared-field-${id1}-ChildName`)).toHaveText('ChildName: Test Patient');
+    await expect(reviewerPage.getByTestId(`shared-field-${id1}-Age`)).toHaveText('Age: 8');
+  });
+
+  reviewerTest('shows expandable field details', async ({ reviewerPage }) => {
+    const doc = createReviewDocumentDto({ status: 'InReview' });
+    const id1 = '44444444-4444-4444-4444-444444444444';
     const similar = {
       items: [
         createSimilarCaseDto({
           documentId: id1,
           summary: 'Subject: Test Patient. Category: ChildWelfare.',
           metadata: { ChildName: 'Test Patient', Age: '8', ReasonForReferral: 'Neglect' },
+          sharedFields: {},
         }),
       ],
     };
@@ -88,6 +141,26 @@ reviewerTest.describe('Similar cases panel (isolation)', () => {
     await reviewerPage.getByText('Field Details').click();
     await expect(reviewerPage.getByText('ChildName')).toBeVisible();
     await expect(reviewerPage.getByText('Neglect')).toBeVisible();
+  });
+
+  reviewerTest('does not show shared fields section when empty', async ({ reviewerPage }) => {
+    const doc = createReviewDocumentDto({ status: 'InReview' });
+    const id1 = '55555555-5555-5555-5555-555555555555';
+    const similar = {
+      items: [
+        createSimilarCaseDto({
+          documentId: id1,
+          metadata: { ChildName: 'Someone Else' },
+          sharedFields: {},
+        }),
+      ],
+    };
+    await mockGetReviewDocument(reviewerPage, doc);
+    await mockGetSimilarCases(reviewerPage, doc.id, similar);
+    await reviewerPage.goto(`/reviews/${doc.id}`);
+
+    await reviewerPage.getByText('Similar Cases').click();
+    await expect(reviewerPage.getByTestId(`shared-fields-${id1}`)).not.toBeVisible();
   });
 
   reviewerTest('shows loading state', async ({ reviewerPage }) => {
