@@ -12,7 +12,6 @@ export interface AuthResponse {
 }
 
 export interface LoginPayload {
-  tenantId: string;
   email: string;
   password: string;
 }

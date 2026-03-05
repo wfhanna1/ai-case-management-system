@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OcrWorkerService\OcrWorker.Domain\OcrWorker.Domain.csproj" />
+    <ProjectReference Include="..\..\src\OcrWorkerService\OcrWorker.Infrastructure\OcrWorker.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

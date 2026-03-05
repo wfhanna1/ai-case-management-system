@@ -11,6 +11,7 @@ public sealed class CrossTenantIsolationTests : IDisposable
     private readonly IntakeDbContext _db;
     private readonly RequestTenantContext _tenantCtx = new();
     private readonly EfDocumentRepository _repository;
+    private readonly EfUserRepository _userRepository;
 
     public CrossTenantIsolationTests()
     {
@@ -19,6 +20,7 @@ public sealed class CrossTenantIsolationTests : IDisposable
             .Options;
         _db = new IntakeDbContext(options, _tenantCtx);
         _repository = new EfDocumentRepository(_db, NullLogger<EfDocumentRepository>.Instance);
+        _userRepository = new EfUserRepository(_db, NullLogger<EfUserRepository>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -88,5 +90,105 @@ public sealed class CrossTenantIsolationTests : IDisposable
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value);
+    }
+
+    [Fact]
+    public async Task FindByEmail_WithWrongTenantId_ReturnsNull()
+    {
+        var tenantA = TenantId.New();
+        var tenantB = TenantId.New();
+
+        _tenantCtx.SetTenant(tenantA);
+        var user = User.Register(tenantA, "user@a.com", "hash", [UserRole.IntakeWorker]);
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        _tenantCtx.SetTenant(tenantB);
+        var result = await _userRepository.FindByEmailAsync("user@a.com", tenantB);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public async Task FindByEmailOnly_DoesNotLeakTenantNames_ReturnsSingleUser()
+    {
+        var tenantA = TenantId.New();
+        var tenantB = TenantId.New();
+
+        _tenantCtx.SetTenant(tenantA);
+        _db.Users.Add(User.Register(tenantA, "unique@a.com", "hash-a", [UserRole.IntakeWorker]));
+        await _db.SaveChangesAsync();
+
+        _tenantCtx.SetTenant(tenantB);
+        _db.Users.Add(User.Register(tenantB, "unique@b.com", "hash-b", [UserRole.IntakeWorker]));
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var result = await _userRepository.FindByEmailOnlyAsync("unique@a.com");
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(tenantA, result.Value.TenantId);
+        Assert.Equal("unique@a.com", result.Value.Email);
+    }
+
+    [Fact]
+    public async Task CountByEmail_DetectsMultipleTenantsWithSameEmail()
+    {
+        var tenantA = TenantId.New();
+        var tenantB = TenantId.New();
+
+        _tenantCtx.SetTenant(tenantA);
+        _db.Users.Add(User.Register(tenantA, "shared@test.com", "hash-a", [UserRole.IntakeWorker]));
+        await _db.SaveChangesAsync();
+
+        _tenantCtx.SetTenant(tenantB);
+        _db.Users.Add(User.Register(tenantB, "shared@test.com", "hash-b", [UserRole.IntakeWorker]));
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var countResult = await _userRepository.CountByEmailAsync("shared@test.com");
+
+        Assert.True(countResult.IsSuccess);
+        Assert.Equal(2, countResult.Value);
+    }
+
+    [Fact]
+    public async Task FindByEmail_CannotAccessUserFromAnotherTenant()
+    {
+        var tenantA = TenantId.New();
+        var tenantB = TenantId.New();
+
+        _tenantCtx.SetTenant(tenantA);
+        _db.Users.Add(User.Register(tenantA, "admin@corp.com", "hash", [UserRole.Admin]));
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        _tenantCtx.SetTenant(tenantB);
+        var result = await _userRepository.FindByEmailAsync("admin@corp.com", tenantB);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public async Task FormTemplates_CrossTenant_ReturnsEmpty()
+    {
+        var tenantA = TenantId.New();
+        var tenantB = TenantId.New();
+
+        _tenantCtx.SetTenant(tenantA);
+        _db.FormTemplates.Add(FormTemplate.Create(
+            tenantA, "Template A", "Desc", TemplateType.ChildWelfare,
+            [new TemplateField("Name", FieldType.Text, true, null)]));
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        _tenantCtx.SetTenant(tenantB);
+        var templates = await _db.FormTemplates.ToListAsync();
+
+        Assert.Empty(templates);
     }
 }

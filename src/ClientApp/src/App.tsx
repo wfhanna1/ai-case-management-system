@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '@/layouts/MainLayout';
-import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
+import RootRedirect from '@/components/RootRedirect';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
 import TemplatesPage from '@/pages/TemplatesPage';
 import TemplateDetailPage from '@/pages/TemplateDetailPage';
+import UploadPage from '@/pages/UploadPage';
+import DocumentsPage from '@/pages/DocumentsPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 function App() {
@@ -14,7 +16,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route element={<MainLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<RootRedirect />} />
         <Route
           path="/dashboard"
           element={
@@ -36,6 +38,22 @@ function App() {
           element={
             <ProtectedRoute>
               <TemplateDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/upload"
+          element={
+            <ProtectedRoute>
+              <UploadPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute>
+              <DocumentsPage />
             </ProtectedRoute>
           }
         />

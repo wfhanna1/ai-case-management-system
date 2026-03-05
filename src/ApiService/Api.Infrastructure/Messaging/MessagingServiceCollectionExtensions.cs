@@ -31,6 +31,8 @@ public static class MessagingServiceCollectionExtensions
 
         services.AddMassTransit(bus =>
         {
+            bus.AddConsumer<DocumentProcessedConsumer>();
+
             bus.UsingRabbitMq((ctx, cfg) =>
             {
                 cfg.Host(host, h =>
@@ -40,6 +42,14 @@ public static class MessagingServiceCollectionExtensions
                 });
 
                 cfg.UsePublishFilter(typeof(TenantHeaderPublishFilter<>), ctx);
+
+                cfg.ReceiveEndpoint("api-document-processed", ep =>
+                {
+                    ep.UseMessageRetry(r =>
+                        r.Exponential(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(2)));
+
+                    ep.ConfigureConsumer<DocumentProcessedConsumer>(ctx);
+                });
             });
         });
 

@@ -7,7 +7,7 @@ public sealed record RegisterUserRequest(
     IEnumerable<string> Roles);
 
 public sealed record LoginRequest(
-    Guid TenantId,
+    Guid? TenantId,
     string Email,
     string Password);
 

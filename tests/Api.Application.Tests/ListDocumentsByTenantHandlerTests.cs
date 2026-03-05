@@ -108,7 +108,13 @@ public sealed class ListDocumentsByTenantHandlerTests
         public Task<Result<IntakeDocument?>> FindByIdAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default)
             => throw new NotImplementedException();
 
+        public Task<Result<IntakeDocument?>> FindByIdUnfilteredAsync(DocumentId id, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Result<Unit>> UpdateAsync(IntakeDocument document, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default)

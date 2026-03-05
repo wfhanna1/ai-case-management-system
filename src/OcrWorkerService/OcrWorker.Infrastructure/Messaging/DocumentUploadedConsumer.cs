@@ -2,21 +2,26 @@ using MassTransit;
 using Messaging.Contracts.Events;
 using Messaging.Contracts.Models;
 using Microsoft.Extensions.Logging;
+using OcrWorker.Application;
 
 namespace OcrWorker.Infrastructure.Messaging;
 
 /// <summary>
 /// Consumes DocumentUploadedEvent messages from the message bus and triggers OCR processing.
-/// After (stub) processing it publishes a DocumentProcessedEvent via the ConsumeContext
+/// After processing it publishes a DocumentProcessedEvent via the ConsumeContext
 /// so the outbound message participates in the same transport lifecycle (outbox, retries).
 /// </summary>
 public sealed class DocumentUploadedConsumer : IConsumer<DocumentUploadedEvent>
 {
     private readonly ILogger<DocumentUploadedConsumer> _logger;
+    private readonly ProcessDocumentHandler _handler;
 
-    public DocumentUploadedConsumer(ILogger<DocumentUploadedConsumer> logger)
+    public DocumentUploadedConsumer(
+        ILogger<DocumentUploadedConsumer> logger,
+        ProcessDocumentHandler handler)
     {
         _logger = logger;
+        _handler = handler;
     }
 
     public async Task Consume(ConsumeContext<DocumentUploadedEvent> context)
@@ -29,9 +34,22 @@ public sealed class DocumentUploadedConsumer : IConsumer<DocumentUploadedEvent>
             message.TenantId,
             message.FileName);
 
-        // TODO: inject and invoke actual OCR use case from OcrWorker.Application.
-        // Stub: emit an empty extraction result to keep the pipeline flowing.
-        var extractedFields = new Dictionary<string, ExtractedFieldResult>();
+        // TODO: Fetch actual document bytes from file storage (IFileStoragePort) once
+        // a real OCR adapter replaces MockOcrAdapter. The mock ignores stream content.
+        using var stream = new MemoryStream();
+        var ocrResult = await _handler.HandleAsync(stream, message.FileName, context.CancellationToken);
+
+        if (ocrResult.IsFailure)
+        {
+            _logger.LogError(
+                "OCR processing failed for DocumentId={DocumentId}: {Error}",
+                message.DocumentId, ocrResult.Error.Message);
+            throw new InvalidOperationException(ocrResult.Error.Message);
+        }
+
+        var extractedFields = ocrResult.Value.Fields.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new ExtractedFieldResult(kvp.Value.FieldName, kvp.Value.Value, kvp.Value.Confidence));
 
         var processed = new DocumentProcessedEvent(
             DocumentId: message.DocumentId,
@@ -42,7 +60,8 @@ public sealed class DocumentUploadedConsumer : IConsumer<DocumentUploadedEvent>
         await context.Publish(processed, context.CancellationToken);
 
         _logger.LogInformation(
-            "Published DocumentProcessedEvent. DocumentId={DocumentId}",
-            message.DocumentId);
+            "Published DocumentProcessedEvent. DocumentId={DocumentId} FieldCount={FieldCount}",
+            message.DocumentId,
+            extractedFields.Count);
     }
 }
