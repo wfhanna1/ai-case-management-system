@@ -9,6 +9,7 @@ import Chip from '@mui/material/Chip';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FolderIcon from '@mui/icons-material/Folder';
+import RateReviewIcon from '@mui/icons-material/RateReview';
 import useAuthStore from '@/stores/authStore';
 
 function MainLayout() {
@@ -39,9 +40,14 @@ function MainLayout() {
               <Button color="inherit" onClick={() => navigate('/documents')} sx={{ mr: 1 }} startIcon={<FolderIcon />}>
                 Documents
               </Button>
-              <Button color="inherit" onClick={() => navigate('/templates')} sx={{ mr: 2 }}>
+              <Button color="inherit" onClick={() => navigate('/templates')} sx={{ mr: 1 }}>
                 Templates
               </Button>
+              {(user.roles.includes('Reviewer') || user.roles.includes('Admin')) && (
+                <Button color="inherit" onClick={() => navigate('/reviews')} sx={{ mr: 2 }} startIcon={<RateReviewIcon />}>
+                  Reviews
+                </Button>
+              )}
               <Typography variant="body2" sx={{ mr: 1 }}>
                 {user.email}
               </Typography>

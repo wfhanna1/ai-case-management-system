@@ -5,7 +5,7 @@ export interface DocumentDto {
   tenantId: string;
   originalFileName: string;
   storageKey: string;
-  status: 'Submitted' | 'Processing' | 'Completed' | 'Failed';
+  status: 'Submitted' | 'Processing' | 'Completed' | 'Failed' | 'PendingReview' | 'InReview' | 'Finalized';
   submittedAt: string;
   processedAt: string | null;
 }
