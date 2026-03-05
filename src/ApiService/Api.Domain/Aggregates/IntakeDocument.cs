@@ -73,7 +73,7 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
 
     /// <summary>
     /// Records successful OCR completion and extracted text.
-    /// Transitions to PendingReview so reviewers can act on the document.
+    /// Call MarkPendingReview() after this to route the document to reviewers.
     /// </summary>
     public Result<Unit> MarkCompleted(IReadOnlyList<ExtractedField>? extractedFields = null)
     {
