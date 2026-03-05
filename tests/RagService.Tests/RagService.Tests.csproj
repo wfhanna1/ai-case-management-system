@@ -20,6 +20,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RagService\RagService.Domain\RagService.Domain.csproj" />
+    <ProjectReference Include="..\..\src\RagService\RagService.Application\RagService.Application.csproj" />
+    <ProjectReference Include="..\..\src\RagService\RagService.Infrastructure\RagService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\RagService\RagService.Host\RagService.Host.csproj" />
   </ItemGroup>
 
 </Project>

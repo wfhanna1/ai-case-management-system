@@ -7,6 +7,7 @@ import type {
   CaseDetailDto,
   SearchDocumentsResultDto,
   SearchCasesResultDto,
+  SimilarCasesResultDto,
 } from '../fixtures/mock-data';
 import { apiOk } from '../fixtures/mock-data';
 
@@ -56,9 +57,15 @@ export async function mockGetReviewQueue(page: Page, docs: ReviewDocumentDto[]) 
 }
 
 export async function mockGetReviewDocument(page: Page, doc: ReviewDocumentDto) {
+  // Default mock for similar-cases (empty) so the useQuery doesn't hit a real server.
+  // Tests that need specific similar-cases data should call mockGetSimilarCases after this.
+  await page.route(`**/api/reviews/${doc.id}/similar-cases`, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: [] })) })
+  );
   await page.route(`**/api/reviews/${doc.id}`, route => {
     if (route.request().url().includes('/audit') || route.request().url().includes('/start') ||
-        route.request().url().includes('/correct-field') || route.request().url().includes('/finalize')) {
+        route.request().url().includes('/correct-field') || route.request().url().includes('/finalize') ||
+        route.request().url().includes('/similar-cases')) {
       return route.continue();
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(doc)) });
@@ -86,6 +93,12 @@ export async function mockFinalizeReview(page: Page, docId: string) {
 export async function mockGetAuditLog(page: Page, docId: string, entries: AuditLogEntryDto[]) {
   await page.route(`**/api/reviews/${docId}/audit`, route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(entries)) })
+  );
+}
+
+export async function mockGetSimilarCases(page: Page, docId: string, result: SimilarCasesResultDto) {
+  await page.route(`**/api/reviews/${docId}/similar-cases`, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(result)) })
   );
 }
 

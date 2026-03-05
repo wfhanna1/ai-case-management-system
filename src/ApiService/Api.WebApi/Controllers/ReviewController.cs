@@ -19,6 +19,7 @@ public sealed class ReviewController : ControllerBase
     private readonly CorrectFieldHandler _correctFieldHandler;
     private readonly FinalizeReviewHandler _finalizeReviewHandler;
     private readonly GetAuditTrailHandler _getAuditTrailHandler;
+    private readonly GetSimilarCasesHandler _similarCasesHandler;
     private readonly ITenantContext _tenantContext;
 
     public ReviewController(
@@ -28,6 +29,7 @@ public sealed class ReviewController : ControllerBase
         CorrectFieldHandler correctFieldHandler,
         FinalizeReviewHandler finalizeReviewHandler,
         GetAuditTrailHandler getAuditTrailHandler,
+        GetSimilarCasesHandler similarCasesHandler,
         ITenantContext tenantContext)
     {
         _listPendingHandler = listPendingHandler;
@@ -36,6 +38,7 @@ public sealed class ReviewController : ControllerBase
         _correctFieldHandler = correctFieldHandler;
         _finalizeReviewHandler = finalizeReviewHandler;
         _getAuditTrailHandler = getAuditTrailHandler;
+        _similarCasesHandler = similarCasesHandler;
         _tenantContext = tenantContext;
     }
 
@@ -143,6 +146,19 @@ public sealed class ReviewController : ControllerBase
         }
 
         return Ok(ApiResponse<object>.Ok(new { }));
+    }
+
+    [HttpGet("{documentId:guid}/similar-cases")]
+    public async Task<IActionResult> GetSimilarCases(Guid documentId, CancellationToken ct)
+    {
+        var tenantId = _tenantContext.TenantId!.Value;
+        var result = await _similarCasesHandler.HandleAsync(documentId, tenantId, 5, ct);
+
+        if (result.IsFailure)
+            return StatusCode(500, ApiResponse<SimilarCasesResultDto>.Fail(
+                result.Error.Code, "Failed to retrieve similar cases"));
+
+        return Ok(ApiResponse<SimilarCasesResultDto>.Ok(result.Value));
     }
 
     [HttpGet("{documentId:guid}/audit")]

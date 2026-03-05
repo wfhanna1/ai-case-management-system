@@ -91,3 +91,24 @@ export async function getAuditTrail(documentId: string): Promise<AuditLogEntryDt
   }
   return res.data.data ?? [];
 }
+
+export interface SimilarCaseDto {
+  documentId: string;
+  score: number;
+  summary: string;
+  metadata: Record<string, string>;
+}
+
+export interface SimilarCasesResultDto {
+  items: SimilarCaseDto[];
+}
+
+export async function getSimilarCases(documentId: string): Promise<SimilarCasesResultDto> {
+  const res = await api.get<ApiResponse<SimilarCasesResultDto>>(
+    `/reviews/${documentId}/similar-cases`
+  );
+  if (res.data.error) {
+    throw new Error(res.data.error.message);
+  }
+  return res.data.data ?? { items: [] };
+}
