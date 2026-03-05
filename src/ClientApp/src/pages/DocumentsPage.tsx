@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -10,8 +11,10 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { getDocuments, type DocumentDto } from '@/services/documentService';
+import useAuthStore from '@/stores/authStore';
 
 const STATUS_COLORS: Record<DocumentDto['status'], 'info' | 'warning' | 'success' | 'error'> = {
   Submitted: 'info',
@@ -29,6 +32,10 @@ function formatDate(dateStr: string | null): string {
 }
 
 function DocumentsPage() {
+  const navigate = useNavigate();
+  const { hasRole } = useAuthStore();
+  const canReview = hasRole('Reviewer') || hasRole('Admin');
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['documents'],
     queryFn: () => getDocuments(),
@@ -56,12 +63,13 @@ function DocumentsPage() {
                 <TableCell>Status</TableCell>
                 <TableCell>Submitted At</TableCell>
                 <TableCell>Processed At</TableCell>
+                {canReview && <TableCell>Actions</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={canReview ? 5 : 4} align="center" sx={{ py: 4 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
@@ -78,11 +86,25 @@ function DocumentsPage() {
                     </TableCell>
                     <TableCell>{formatDate(doc.submittedAt)}</TableCell>
                     <TableCell>{formatDate(doc.processedAt)}</TableCell>
+                    {canReview && (
+                      <TableCell>
+                        {doc.status === 'PendingReview' && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => navigate(`/reviews/${doc.id}`)}
+                            data-testid={`review-btn-${doc.id}`}
+                          >
+                            Review
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={canReview ? 5 : 4} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">No documents found</Typography>
                   </TableCell>
                 </TableRow>

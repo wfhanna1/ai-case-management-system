@@ -58,6 +58,20 @@ workerTest.describe('Documents page (isolation)', () => {
     await expect(workerPage.getByRole('heading', { name: 'Documents' })).toBeVisible();
   });
 
+  workerTest('does not show Review button for non-reviewer users', async ({ workerPage }) => {
+    const docs = [
+      createDocumentDto({ originalFileName: 'pending.pdf', status: 'PendingReview' }),
+      createDocumentDto({ originalFileName: 'submitted.pdf', status: 'Submitted' }),
+    ];
+    await mockGetDocuments(workerPage, docs);
+    await workerPage.goto('/documents');
+
+    await expect(workerPage.getByText('pending.pdf')).toBeVisible();
+    await expect(workerPage.getByRole('columnheader', { name: 'Actions' })).toHaveCount(0);
+    const table = workerPage.locator('table');
+    await expect(table.getByRole('button', { name: 'Review' })).toHaveCount(0);
+  });
+
   workerTest('handles API error', async ({ workerPage }) => {
     await mockApiError(workerPage, '**/api/documents', 'SERVER_ERROR', 'Internal server error');
     await workerPage.goto('/documents');
