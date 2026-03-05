@@ -20,6 +20,10 @@ public interface IVectorStorePort
         float[] queryEmbedding,
         int topK = 5,
         CancellationToken ct = default);
+
+    Task<Result<float[]>> GetEmbeddingAsync(
+        Guid documentId,
+        CancellationToken ct = default);
 }
 
 public sealed record SearchHit(
