@@ -1,0 +1,7 @@
+{
+  "lint": { "command": "dotnet build --no-restore -warnaserror", "failureMessage": "Build/lint failed" },
+  "test": { "command": "dotnet test --no-build", "failureMessage": "dotnet test failed" },
+  "lintExtensions": [".cs"],
+  "lintFileCommand": "dotnet build --no-restore -warnaserror",
+  "lintFixHint": "Fix build warnings in the reported files."
+}
