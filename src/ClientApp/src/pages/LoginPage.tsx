@@ -7,18 +7,16 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Alert from '@mui/material/Alert';
-import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
 import useAuthStore from '@/stores/authStore';
-import { login, DEMO_TENANTS } from '@/services/authService';
+import { login } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
 import { validateEmail, validateRequired } from '@/utils/validation';
 
 function LoginPage() {
   const navigate = useNavigate();
   const { setAuth, isAuthenticated } = useAuthStore();
-  const [tenantId, setTenantId] = useState(DEMO_TENANTS[0].id);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -53,7 +51,7 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await login({ tenantId, email, password });
+      const res = await login({ email, password });
       if (res.error || !res.data) {
         setError(res.error?.message ?? 'Login failed');
         return;
@@ -64,7 +62,7 @@ function LoginPage() {
           id: res.data.userId,
           email: (claims.email as string) ?? email,
           roles: Array.isArray(claims.role) ? (claims.role as string[]) : [claims.role as string],
-          tenantId,
+          tenantId: (claims.tenant_id as string) ?? '',
         },
         res.data.accessToken,
         res.data.refreshToken
@@ -102,20 +100,6 @@ function LoginPage() {
           )}
 
           <Box component="form" noValidate onSubmit={handleSubmit}>
-            <TextField
-              select
-              label="Tenant"
-              value={tenantId}
-              onChange={e => setTenantId(e.target.value)}
-              fullWidth
-              margin="normal"
-            >
-              {DEMO_TENANTS.map(t => (
-                <MenuItem key={t.id} value={t.id}>
-                  {t.name}
-                </MenuItem>
-              ))}
-            </TextField>
             <TextField
               label="Email"
               type="email"

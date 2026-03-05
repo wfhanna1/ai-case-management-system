@@ -7,7 +7,6 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Alert from '@mui/material/Alert';
-import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
 import useAuthStore from '@/stores/authStore';
@@ -15,10 +14,11 @@ import { register, DEMO_TENANTS } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
 import { validateEmail, validatePassword } from '@/utils/validation';
 
+const DEFAULT_TENANT_ID = DEMO_TENANTS[0].id;
+
 function RegisterPage() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
-  const [tenantId, setTenantId] = useState(DEMO_TENANTS[0].id);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -65,7 +65,7 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await register({ tenantId, email, password, roles: ['IntakeWorker'] });
+      const res = await register({ tenantId: DEFAULT_TENANT_ID, email, password, roles: ['IntakeWorker'] });
       if (res.error || !res.data) {
         setError(res.error?.message ?? 'Registration failed');
         return;
@@ -76,7 +76,7 @@ function RegisterPage() {
           id: res.data.userId,
           email: (claims.email as string) ?? email,
           roles: Array.isArray(claims.role) ? (claims.role as string[]) : [claims.role as string],
-          tenantId,
+          tenantId: (claims.tenant_id as string) ?? DEFAULT_TENANT_ID,
         },
         res.data.accessToken,
         res.data.refreshToken
@@ -114,20 +114,6 @@ function RegisterPage() {
           )}
 
           <Box component="form" noValidate onSubmit={handleSubmit}>
-            <TextField
-              select
-              label="Tenant"
-              value={tenantId}
-              onChange={e => setTenantId(e.target.value)}
-              fullWidth
-              margin="normal"
-            >
-              {DEMO_TENANTS.map(t => (
-                <MenuItem key={t.id} value={t.id}>
-                  {t.name}
-                </MenuItem>
-              ))}
-            </TextField>
             <TextField
               label="Email"
               type="email"

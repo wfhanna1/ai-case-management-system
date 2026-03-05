@@ -59,14 +59,50 @@ public sealed class LoginHandlerTests
         Assert.Equal("INVALID_CREDENTIALS", result.Error.Code);
     }
 
+    [Fact]
+    public async Task HandleAsync_NullTenantId_UsesFindByEmailOnly_ReturnsAuthResponse()
+    {
+        var tenantId = TenantId.New();
+        _userRepo.ExistingUser = User.Register(tenantId, "test@example.com", "hashed-password123", [UserRole.IntakeWorker]);
+        _userRepo.EmailCount = 1;
+        var request = new LoginRequest(null, "test@example.com", "password123");
+
+        var result = await _handler.HandleAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("access-token", result.Value.AccessToken);
+        Assert.Equal("refresh-token", result.Value.RefreshToken);
+    }
+
+    [Fact]
+    public async Task HandleAsync_NullTenantId_MultipleAccounts_ReturnsTenantRequired()
+    {
+        var tenantId = TenantId.New();
+        _userRepo.ExistingUser = User.Register(tenantId, "test@example.com", "hashed-password123", [UserRole.IntakeWorker]);
+        _userRepo.EmailCount = 2;
+        var request = new LoginRequest(null, "test@example.com", "password123");
+
+        var result = await _handler.HandleAsync(request);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("TENANT_REQUIRED", result.Error.Code);
+    }
+
     // --- Test Doubles ---
 
     private sealed class StubUserRepository : IUserRepository
     {
         public User? ExistingUser { get; set; }
+        public int EmailCount { get; set; } = 1;
 
         public Task<Result<User?>> FindByEmailAsync(string email, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(Result<User?>.Success(ExistingUser));
+
+        public Task<Result<User?>> FindByEmailOnlyAsync(string email, CancellationToken ct = default)
+            => Task.FromResult(Result<User?>.Success(ExistingUser));
+
+        public Task<Result<int>> CountByEmailAsync(string email, CancellationToken ct = default)
+            => Task.FromResult(Result<int>.Success(EmailCount));
 
         public Task<Result<User?>> FindByIdAsync(UserId id, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(Result<User?>.Success(ExistingUser));

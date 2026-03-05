@@ -7,6 +7,8 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Chip from '@mui/material/Chip';
 import DescriptionIcon from '@mui/icons-material/Description';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import FolderIcon from '@mui/icons-material/Folder';
 import useAuthStore from '@/stores/authStore';
 
 function MainLayout() {
@@ -30,6 +32,12 @@ function MainLayout() {
             <>
               <Button color="inherit" onClick={() => navigate('/dashboard')} sx={{ mr: 1 }}>
                 Dashboard
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/upload')} sx={{ mr: 1 }} startIcon={<CloudUploadIcon />}>
+                Upload
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/documents')} sx={{ mr: 1 }} startIcon={<FolderIcon />}>
+                Documents
               </Button>
               <Button color="inherit" onClick={() => navigate('/templates')} sx={{ mr: 2 }}>
                 Templates

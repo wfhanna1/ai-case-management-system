@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const ALPHA_TENANT_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
 const TEST_EMAIL = `e2e-${Date.now()}@test.com`;
 const TEST_PASSWORD = 'TestPassword123!';
 
@@ -11,8 +10,6 @@ test.describe('Auth flow E2E', () => {
     await expect(page.getByRole('heading', { name: 'Create Account' })).toBeVisible();
 
     // Step 2: Fill registration form
-    await page.getByLabel('Tenant').click();
-    await page.getByRole('option', { name: 'Alpha Clinic' }).click();
     await page.getByLabel('Email').fill(TEST_EMAIL);
     await page.getByLabel('Password', { exact: true }).fill(TEST_PASSWORD);
     await page.getByLabel('Confirm Password').fill(TEST_PASSWORD);
@@ -31,8 +28,6 @@ test.describe('Auth flow E2E', () => {
     await expect(page).toHaveURL('/login');
 
     // Step 6: Login with the registered account
-    await page.getByLabel('Tenant').click();
-    await page.getByRole('option', { name: 'Alpha Clinic' }).click();
     await page.getByLabel('Email').fill(TEST_EMAIL);
     await page.getByLabel('Password').fill(TEST_PASSWORD);
     await page.getByRole('button', { name: 'Sign In' }).click();

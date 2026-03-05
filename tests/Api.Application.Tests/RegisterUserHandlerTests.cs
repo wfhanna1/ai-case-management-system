@@ -84,6 +84,12 @@ public sealed class RegisterUserHandlerTests
         public Task<Result<User?>> FindByEmailAsync(string email, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(Result<User?>.Success(ExistingUser));
 
+        public Task<Result<User?>> FindByEmailOnlyAsync(string email, CancellationToken ct = default)
+            => Task.FromResult(Result<User?>.Success(ExistingUser));
+
+        public Task<Result<int>> CountByEmailAsync(string email, CancellationToken ct = default)
+            => Task.FromResult(Result<int>.Success(ExistingUser is null ? 0 : 1));
+
         public Task<Result<User?>> FindByIdAsync(UserId id, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(Result<User?>.Success(ExistingUser));
 

@@ -33,6 +33,40 @@ public sealed class EfUserRepository : IUserRepository
         }
     }
 
+    public async Task<Result<User?>> FindByEmailOnlyAsync(
+        string email, CancellationToken ct = default)
+    {
+        try
+        {
+            var user = await _db.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.Email == email, ct);
+            return Result<User?>.Success(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to find user by email across tenants");
+            return Result<User?>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
+    public async Task<Result<int>> CountByEmailAsync(
+        string email, CancellationToken ct = default)
+    {
+        try
+        {
+            var count = await _db.Users
+                .IgnoreQueryFilters()
+                .CountAsync(u => u.Email == email, ct);
+            return Result<int>.Success(count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to count users by email across tenants");
+            return Result<int>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
     public async Task<Result<User?>> FindByIdAsync(
         UserId id, TenantId tenantId, CancellationToken ct = default)
     {

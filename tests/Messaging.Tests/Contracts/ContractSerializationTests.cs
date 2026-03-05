@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using Messaging.Contracts.Events;
 using Messaging.Contracts.Models;
@@ -118,5 +119,89 @@ public sealed class ContractSerializationTests
         Assert.Equal(original.FieldName, deserialized.FieldName);
         Assert.Equal(original.Value, deserialized.Value);
         Assert.Equal(original.Confidence, deserialized.Confidence);
+    }
+
+    // -----------------------------------------------------------------------
+    // Schema validation tests -- verify each contract has the required fields
+    // so producers and consumers stay in sync across service boundaries.
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void DocumentUploadedEvent_Has_Required_Properties()
+    {
+        var properties = typeof(DocumentUploadedEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var names = properties.Select(p => p.Name).ToHashSet();
+
+        Assert.Contains("DocumentId", names);
+        Assert.Contains("TenantId", names);
+        Assert.Contains("FileName", names);
+        Assert.Contains("UploadedAt", names);
+    }
+
+    [Fact]
+    public void DocumentUploadedEvent_Property_Types_Match_Contract()
+    {
+        var props = typeof(DocumentUploadedEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .ToDictionary(p => p.Name, p => p.PropertyType);
+
+        Assert.Equal(typeof(Guid), props["DocumentId"]);
+        Assert.Equal(typeof(Guid), props["TenantId"]);
+        Assert.Equal(typeof(string), props["FileName"]);
+        Assert.Equal(typeof(DateTimeOffset), props["UploadedAt"]);
+    }
+
+    [Fact]
+    public void DocumentProcessedEvent_Has_Required_Properties()
+    {
+        var names = typeof(DocumentProcessedEvent)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name).ToHashSet();
+
+        Assert.Contains("DocumentId", names);
+        Assert.Contains("TenantId", names);
+        Assert.Contains("ExtractedFields", names);
+        Assert.Contains("ProcessedAt", names);
+    }
+
+    [Fact]
+    public void EmbeddingRequestedEvent_Has_Required_Properties()
+    {
+        var names = typeof(EmbeddingRequestedEvent)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name).ToHashSet();
+
+        Assert.Contains("DocumentId", names);
+        Assert.Contains("TenantId", names);
+        Assert.Contains("TextContent", names);
+        Assert.Contains("FieldValues", names);
+        Assert.Contains("RequestedAt", names);
+    }
+
+    [Fact]
+    public void EmbeddingCompletedEvent_Has_Required_Properties()
+    {
+        var names = typeof(EmbeddingCompletedEvent)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name).ToHashSet();
+
+        Assert.Contains("DocumentId", names);
+        Assert.Contains("TenantId", names);
+        Assert.Contains("CompletedAt", names);
+    }
+
+    [Fact]
+    public void ExtractedFieldResult_Has_Required_Properties()
+    {
+        var props = typeof(ExtractedFieldResult)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .ToDictionary(p => p.Name, p => p.PropertyType);
+
+        Assert.Contains("FieldName", props.Keys);
+        Assert.Contains("Value", props.Keys);
+        Assert.Contains("Confidence", props.Keys);
+
+        Assert.Equal(typeof(string), props["FieldName"]);
+        Assert.Equal(typeof(string), props["Value"]);
+        Assert.Equal(typeof(double), props["Confidence"]);
     }
 }

@@ -4,7 +4,10 @@ using Messaging.Contracts.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OcrWorker.Application;
+using OcrWorker.Domain.Ports;
 using OcrWorker.Infrastructure.Messaging;
+using OcrWorker.Infrastructure.Ocr;
 
 namespace Messaging.Tests.Consumers;
 
@@ -15,16 +18,23 @@ namespace Messaging.Tests.Consumers;
 /// </summary>
 public sealed class DocumentUploadedConsumerTests
 {
-    [Fact]
-    public async Task DocumentUploadedConsumer_WhenMessagePublished_ConsumesAndPublishesProcessedEvent()
+    private static ServiceProvider BuildProvider()
     {
-        await using var provider = new ServiceCollection()
+        return new ServiceCollection()
             .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
+            .AddSingleton<IOcrPort, MockOcrAdapter>()
+            .AddTransient<ProcessDocumentHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentUploadedConsumer>();
             })
             .BuildServiceProvider(true);
+    }
+
+    [Fact]
+    public async Task DocumentUploadedConsumer_WhenMessagePublished_ConsumesAndPublishesProcessedEvent()
+    {
+        await using var provider = BuildProvider();
 
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
@@ -53,6 +63,7 @@ public sealed class DocumentUploadedConsumerTests
 
             Assert.Equal(documentId, published.Context.Message.DocumentId);
             Assert.Equal(tenantId, published.Context.Message.TenantId);
+            Assert.NotEmpty(published.Context.Message.ExtractedFields);
         }
         finally
         {
@@ -63,13 +74,7 @@ public sealed class DocumentUploadedConsumerTests
     [Fact]
     public async Task DocumentUploadedConsumer_NoFaults_WhenMessageIsValid()
     {
-        await using var provider = new ServiceCollection()
-            .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
-            .AddMassTransitTestHarness(cfg =>
-            {
-                cfg.AddConsumer<DocumentUploadedConsumer>();
-            })
-            .BuildServiceProvider(true);
+        await using var provider = BuildProvider();
 
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();

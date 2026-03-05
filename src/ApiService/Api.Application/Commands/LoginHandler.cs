@@ -1,4 +1,5 @@
 using Api.Application.DTOs;
+using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
@@ -28,9 +29,27 @@ public sealed class LoginHandler
         LoginRequest request,
         CancellationToken ct = default)
     {
-        var tenantId = new TenantId(request.TenantId);
+        Result<User?> findResult;
 
-        var findResult = await _userRepository.FindByEmailAsync(request.Email, tenantId, ct);
+        if (request.TenantId.HasValue)
+        {
+            var tenantId = new TenantId(request.TenantId.Value);
+            findResult = await _userRepository.FindByEmailAsync(request.Email, tenantId, ct);
+        }
+        else
+        {
+            var countResult = await _userRepository.CountByEmailAsync(request.Email, ct);
+            if (countResult.IsFailure)
+                return Result<AuthResponse>.Failure(countResult.Error);
+
+            if (countResult.Value > 1)
+                return Result<AuthResponse>.Failure(new Error(
+                    "TENANT_REQUIRED",
+                    "Multiple accounts found for this email. Please specify a tenant."));
+
+            findResult = await _userRepository.FindByEmailOnlyAsync(request.Email, ct);
+        }
+
         if (findResult.IsFailure)
             return Result<AuthResponse>.Failure(findResult.Error);
 
@@ -52,7 +71,7 @@ public sealed class LoginHandler
 
         var accessToken = _tokenService.GenerateAccessToken(user);
 
-        _logger.LogInformation("User {UserId} logged in for tenant {TenantId}", user.Id.Value, tenantId.Value);
+        _logger.LogInformation("User {UserId} logged in for tenant {TenantId}", user.Id.Value, user.TenantId.Value);
 
         return Result<AuthResponse>.Success(new AuthResponse(
             user.Id.Value, accessToken, refreshToken,
