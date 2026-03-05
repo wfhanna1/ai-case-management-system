@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Api.WebApi;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,7 +19,7 @@ public sealed class TenantResolutionMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_ValidHeader_SetsTenantAndCallsNext()
+    public async Task InvokeAsync_ValidJwtClaim_SetsTenantAndCallsNext()
     {
         var tenantGuid = Guid.NewGuid();
         var context = MakeContext(tenantGuid.ToString());
@@ -56,7 +57,19 @@ public sealed class TenantResolutionMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_MissingHeader_Returns400()
+    public async Task InvokeAsync_AuthPath_SkipsExtractionAndCallsNext()
+    {
+        var context = MakeContext(null, path: "/api/auth/login");
+        var tenantCtx = new RequestTenantContext();
+
+        await _middleware.InvokeAsync(context, tenantCtx);
+
+        Assert.True(_nextCalled);
+        Assert.Null(tenantCtx.TenantId);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_MissingClaim_Returns401()
     {
         var context = MakeContext(null);
         var tenantCtx = new RequestTenantContext();
@@ -64,11 +77,11 @@ public sealed class TenantResolutionMiddlewareTests
         await _middleware.InvokeAsync(context, tenantCtx);
 
         Assert.False(_nextCalled);
-        Assert.Equal(400, context.Response.StatusCode);
+        Assert.Equal(401, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task InvokeAsync_MalformedHeader_Returns400()
+    public async Task InvokeAsync_MalformedClaim_Returns401()
     {
         var context = MakeContext("not-a-guid");
         var tenantCtx = new RequestTenantContext();
@@ -76,11 +89,11 @@ public sealed class TenantResolutionMiddlewareTests
         await _middleware.InvokeAsync(context, tenantCtx);
 
         Assert.False(_nextCalled);
-        Assert.Equal(400, context.Response.StatusCode);
+        Assert.Equal(401, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task InvokeAsync_EmptyGuid_Returns400()
+    public async Task InvokeAsync_EmptyGuidClaim_Returns401()
     {
         var context = MakeContext(Guid.Empty.ToString());
         var tenantCtx = new RequestTenantContext();
@@ -88,16 +101,21 @@ public sealed class TenantResolutionMiddlewareTests
         await _middleware.InvokeAsync(context, tenantCtx);
 
         Assert.False(_nextCalled);
-        Assert.Equal(400, context.Response.StatusCode);
+        Assert.Equal(401, context.Response.StatusCode);
     }
 
-    private static DefaultHttpContext MakeContext(string? headerValue, string path = "/api/documents")
+    private static DefaultHttpContext MakeContext(string? tenantClaimValue, string path = "/api/documents")
     {
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
         context.Request.Path = new PathString(path);
-        if (headerValue is not null)
-            context.Request.Headers["X-Tenant-Id"] = headerValue;
+
+        if (tenantClaimValue is not null)
+        {
+            var claims = new[] { new Claim("tenant_id", tenantClaimValue) };
+            context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
+        }
+
         return context;
     }
 }

@@ -1,12 +1,17 @@
+using System.Text;
 using Api.Application.Commands;
 using Api.Application.Queries;
 using Api.Domain.Ports;
+using Api.Infrastructure.Auth;
 using Api.Infrastructure.Messaging;
 using Api.Infrastructure.Persistence;
 using Api.Infrastructure.Storage;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using SharedKernel;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +43,31 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "REST API for submitting and tracking handwritten intake documents."
     });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 builder.Services.AddEndpointsApiExplorer();
 
@@ -60,6 +90,37 @@ builder.Services.AddCors(options =>
 });
 
 // ---------------------------------------------------------------------------
+// Authentication -- JWT Bearer
+// ---------------------------------------------------------------------------
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
+    ?? throw new InvalidOperationException("Missing required configuration: Jwt");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("RequireIntakeWorker", policy =>
+        policy.RequireRole("IntakeWorker", "Admin"))
+    .AddPolicy("RequireReviewer", policy =>
+        policy.RequireRole("Reviewer", "Admin"))
+    .AddPolicy("RequireAdmin", policy =>
+        policy.RequireRole("Admin"));
+
+// ---------------------------------------------------------------------------
 // Multi-tenancy -- scoped tenant context populated by middleware
 // ---------------------------------------------------------------------------
 builder.Services.AddScoped<RequestTenantContext>();
@@ -72,8 +133,15 @@ builder.Services.AddDbContext<IntakeDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddTransient<IDocumentRepository, EfDocumentRepository>();
+builder.Services.AddTransient<IUserRepository, EfUserRepository>();
 builder.Services.AddTransient<IFileStoragePort>(_ =>
     new LocalFileStorageAdapter(storagePath));
+
+// ---------------------------------------------------------------------------
+// Auth services
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+builder.Services.AddTransient<ITokenService, JwtTokenService>();
 
 // ---------------------------------------------------------------------------
 // Application services
@@ -81,6 +149,9 @@ builder.Services.AddTransient<IFileStoragePort>(_ =>
 builder.Services.AddTransient<SubmitDocumentHandler>();
 builder.Services.AddTransient<GetDocumentByIdHandler>();
 builder.Services.AddTransient<ListDocumentsByTenantHandler>();
+builder.Services.AddTransient<RegisterUserHandler>();
+builder.Services.AddTransient<LoginHandler>();
+builder.Services.AddTransient<RefreshTokenHandler>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)
@@ -93,6 +164,7 @@ builder.Services.AddApiMessaging(builder.Configuration);
 var app = builder.Build();
 
 app.UseCors("Frontend");
+app.UseAuthentication();
 app.UseMiddleware<Api.WebApi.TenantResolutionMiddleware>();
 
 if (app.Environment.IsDevelopment())
