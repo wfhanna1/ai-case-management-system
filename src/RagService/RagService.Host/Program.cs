@@ -33,7 +33,10 @@ builder.Services.AddSingleton<IVectorStorePort, QdrantVectorStoreAdapter>();
 // ---------------------------------------------------------------------------
 // Hosted services
 // ---------------------------------------------------------------------------
-builder.Services.AddHostedService<RagDataSeeder>();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHostedService<RagDataSeeder>();
+}
 builder.Services.AddHostedService<RagWorkerService>();
 
 var app = builder.Build();
