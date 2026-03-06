@@ -25,19 +25,19 @@ public sealed class HttpRagServiceClient : IRagServiceClient
         _logger = logger;
     }
 
-    public async Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarAsync(
-        Guid documentId, Guid tenantId, int topK = 5, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarByTextAsync(
+        string textContent, Guid tenantId, int topK = 5, CancellationToken ct = default)
     {
         try
         {
-            var url = $"/api/similar?documentId={documentId}&tenantId={tenantId}&topK={topK}";
-            var response = await _httpClient.GetAsync(url, ct);
+            var requestBody = new { text = textContent, tenantId, topK };
+            var response = await _httpClient.PostAsJsonAsync("/api/similar-by-text", requestBody, ct);
 
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
-                    "RAG service returned {StatusCode} for DocumentId={DocumentId}",
-                    response.StatusCode, documentId);
+                    "RAG service returned {StatusCode} for text-based similar search",
+                    response.StatusCode);
                 return Result<IReadOnlyList<SimilarDocumentResult>>.Failure(
                     new Error("RAG_SERVICE_ERROR",
                         $"RAG service returned {(int)response.StatusCode}"));
@@ -56,7 +56,7 @@ public sealed class HttpRagServiceClient : IRagServiceClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to call RAG service for DocumentId={DocumentId}", documentId);
+            _logger.LogError(ex, "Failed to call RAG service for text-based similar search");
             return Result<IReadOnlyList<SimilarDocumentResult>>.Failure(
                 new Error("RAG_SERVICE_ERROR", ex.Message));
         }

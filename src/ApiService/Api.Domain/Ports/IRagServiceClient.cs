@@ -7,8 +7,8 @@ namespace Api.Domain.Ports;
 /// </summary>
 public interface IRagServiceClient
 {
-    Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarAsync(
-        Guid documentId,
+    Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarByTextAsync(
+        string textContent,
         Guid tenantId,
         int topK = 5,
         CancellationToken ct = default);

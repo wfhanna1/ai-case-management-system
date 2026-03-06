@@ -364,6 +364,10 @@ public sealed class ReviewControllerTests
     [Fact]
     public async Task GetSimilarCases_success_returns_200()
     {
+        var doc = CreatePendingReviewDocument();
+        var docRepo = new StubDocumentRepository();
+        docRepo.SetFindByIdResult(doc);
+
         var stubRagClient = new StubRagServiceClient();
         stubRagClient.SetResult(new List<SimilarDocumentResult>
         {
@@ -372,9 +376,9 @@ public sealed class ReviewControllerTests
         var stubSummaryPort = new StubSummaryPort();
         stubSummaryPort.SetResult("Test summary");
 
-        var controller = CreateController(ragClient: stubRagClient, summaryPort: stubSummaryPort);
+        var controller = CreateController(documentRepo: docRepo, ragClient: stubRagClient, summaryPort: stubSummaryPort);
 
-        var result = await controller.GetSimilarCases(Guid.NewGuid(), CancellationToken.None);
+        var result = await controller.GetSimilarCases(doc.Id.Value, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<ApiResponse<SimilarCasesResultDto>>(okResult.Value);
@@ -386,12 +390,16 @@ public sealed class ReviewControllerTests
     [Fact]
     public async Task GetSimilarCases_handler_failure_returns_500()
     {
+        var doc = CreatePendingReviewDocument();
+        var docRepo = new StubDocumentRepository();
+        docRepo.SetFindByIdResult(doc);
+
         var stubRagClient = new StubRagServiceClient();
         stubRagClient.SetFailure(new Error("RAG_ERROR", "Service unavailable"));
 
-        var controller = CreateController(ragClient: stubRagClient);
+        var controller = CreateController(documentRepo: docRepo, ragClient: stubRagClient);
 
-        var result = await controller.GetSimilarCases(Guid.NewGuid(), CancellationToken.None);
+        var result = await controller.GetSimilarCases(doc.Id.Value, CancellationToken.None);
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(500, statusResult.StatusCode);
@@ -476,7 +484,7 @@ public sealed class ReviewControllerTests
         var correctFieldHandler = new CorrectFieldHandler(docRepo, audRepo, NullLogger<CorrectFieldHandler>.Instance);
         var finalizeReviewHandler = new FinalizeReviewHandler(docRepo, audRepo, NullLogger<FinalizeReviewHandler>.Instance);
         var getAuditTrailHandler = new GetAuditTrailHandler(audRepo);
-        var similarCasesHandler = new GetSimilarCasesHandler(rag, summary);
+        var similarCasesHandler = new GetSimilarCasesHandler(rag, summary, docRepo);
 
         return new ReviewController(
             listPendingHandler,
@@ -649,8 +657,8 @@ public sealed class ReviewControllerTests
         public void SetFailure(Error error)
             => _result = Result<IReadOnlyList<SimilarDocumentResult>>.Failure(error);
 
-        public Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarAsync(
-            Guid documentId, Guid tenantId, int topK = 5, CancellationToken ct = default)
+        public Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarByTextAsync(
+            string textContent, Guid tenantId, int topK = 5, CancellationToken ct = default)
             => Task.FromResult(_result ?? Result<IReadOnlyList<SimilarDocumentResult>>.Success(
                 Array.Empty<SimilarDocumentResult>() as IReadOnlyList<SimilarDocumentResult>));
     }

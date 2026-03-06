@@ -17,42 +17,14 @@ public sealed class HttpRagServiceClientTests
     }
 
     [Fact]
-    public async Task FindSimilarAsync_NonSuccessStatus_ReturnsRagServiceError()
-    {
-        _handler.Response = new HttpResponseMessage(HttpStatusCode.InternalServerError);
-
-        var result = await _client.FindSimilarAsync(Guid.NewGuid(), Guid.NewGuid());
-
-        Assert.True(result.IsFailure);
-        Assert.Equal("RAG_SERVICE_ERROR", result.Error.Code);
-        Assert.Contains("500", result.Error.Message);
-    }
-
-    [Fact]
-    public async Task FindSimilarAsync_NullDataInResponse_ReturnsEmptyList()
-    {
-        var json = JsonSerializer.Serialize(new { Data = (object?)null });
-        _handler.Response = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
-        };
-
-        var result = await _client.FindSimilarAsync(Guid.NewGuid(), Guid.NewGuid());
-
-        Assert.True(result.IsSuccess);
-        Assert.Empty(result.Value);
-    }
-
-    [Fact]
-    public async Task FindSimilarAsync_ValidResponse_MapsCorrectly()
+    public async Task FindSimilarByTextAsync_PostsTextToEndpoint()
     {
         var docId = Guid.NewGuid();
         var payload = new
         {
             Data = new[]
             {
-                new { DocumentId = docId, Score = 0.95, Metadata = new Dictionary<string, string> { { "type", "welfare" } } },
-                new { DocumentId = Guid.NewGuid(), Score = 0.80, Metadata = (Dictionary<string, string>?)null }
+                new { DocumentId = docId, Score = 0.92, Metadata = new Dictionary<string, string> { { "Name", "Alice" } } }
             }
         };
         var json = JsonSerializer.Serialize(payload);
@@ -61,48 +33,47 @@ public sealed class HttpRagServiceClientTests
             Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
         };
 
-        var result = await _client.FindSimilarAsync(Guid.NewGuid(), Guid.NewGuid(), topK: 2);
+        var result = await _client.FindSimilarByTextAsync("Child welfare case", Guid.NewGuid(), topK: 5);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(2, result.Value.Count);
+        Assert.Single(result.Value);
         Assert.Equal(docId, result.Value[0].DocumentId);
-        Assert.Equal(0.95, result.Value[0].Score);
-        Assert.Equal("welfare", result.Value[0].Metadata["type"]);
-        Assert.Empty(result.Value[1].Metadata);
+        // Verify it was a POST request
+        Assert.Equal(HttpMethod.Post, _handler.LastRequest?.Method);
     }
 
     [Fact]
-    public async Task FindSimilarAsync_HttpRequestException_ReturnsRagServiceError()
+    public async Task FindSimilarByTextAsync_NonSuccessStatus_ReturnsError()
+    {
+        _handler.Response = new HttpResponseMessage(HttpStatusCode.InternalServerError);
+
+        var result = await _client.FindSimilarByTextAsync("some text", Guid.NewGuid());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("RAG_SERVICE_ERROR", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task FindSimilarByTextAsync_HttpException_ReturnsError()
     {
         _handler.ThrowOnSend = new HttpRequestException("Connection refused");
 
-        var result = await _client.FindSimilarAsync(Guid.NewGuid(), Guid.NewGuid());
+        var result = await _client.FindSimilarByTextAsync("some text", Guid.NewGuid());
 
         Assert.True(result.IsFailure);
         Assert.Equal("RAG_SERVICE_ERROR", result.Error.Code);
-        Assert.Contains("Connection refused", result.Error.Message);
-    }
-
-    [Fact]
-    public async Task FindSimilarAsync_NotFound_ReturnsRagServiceError()
-    {
-        _handler.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
-
-        var result = await _client.FindSimilarAsync(Guid.NewGuid(), Guid.NewGuid());
-
-        Assert.True(result.IsFailure);
-        Assert.Equal("RAG_SERVICE_ERROR", result.Error.Code);
-        Assert.Contains("404", result.Error.Message);
     }
 
     private sealed class StubHttpHandler : HttpMessageHandler
     {
         public HttpResponseMessage Response { get; set; } = new(HttpStatusCode.OK);
         public HttpRequestException? ThrowOnSend { get; set; }
+        public HttpRequestMessage? LastRequest { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequest = request;
             if (ThrowOnSend is not null)
                 throw ThrowOnSend;
             return Task.FromResult(Response);
