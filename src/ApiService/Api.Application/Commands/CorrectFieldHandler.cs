@@ -56,7 +56,7 @@ public sealed class CorrectFieldHandler
         if (saveDocResult.IsFailure)
             return Result<Unit>.Failure(saveDocResult.Error);
 
-        _metrics?.ReviewsCorrected.Add(1);
+        _metrics?.FieldsCorrected.Add(1);
 
         var auditEntry = AuditLogEntry.RecordFieldCorrected(
             tid, did, reviewerId, fieldName, previousValue, correctedValue);

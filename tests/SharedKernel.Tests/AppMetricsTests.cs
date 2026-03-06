@@ -13,6 +13,7 @@ public sealed class AppMetricsTests
         Assert.NotNull(metrics.DocumentsReviewed);
         Assert.NotNull(metrics.ReviewsApproved);
         Assert.NotNull(metrics.ReviewsCorrected);
+        Assert.NotNull(metrics.FieldsCorrected);
         Assert.NotNull(metrics.OcrSuccessCount);
         Assert.NotNull(metrics.OcrFailureCount);
         Assert.NotNull(metrics.EmbeddingsGenerated);
@@ -29,6 +30,7 @@ public sealed class AppMetricsTests
         metrics.DocumentsReviewed.Add(1);
         metrics.ReviewsApproved.Add(1);
         metrics.ReviewsCorrected.Add(1);
+        metrics.FieldsCorrected.Add(1);
         metrics.OcrSuccessCount.Add(1);
         metrics.OcrFailureCount.Add(1);
         metrics.EmbeddingsGenerated.Add(1);

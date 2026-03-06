@@ -7,7 +7,7 @@ namespace SharedKernel.Diagnostics;
 /// Each microservice creates one instance with its service name.
 /// Uses only System.Diagnostics -- no OpenTelemetry dependency in SharedKernel.
 /// </summary>
-public sealed class ServiceDiagnostics
+public sealed class ServiceDiagnostics : IDisposable
 {
     public string ServiceName { get; }
     public ActivitySource ActivitySource { get; }
@@ -17,4 +17,6 @@ public sealed class ServiceDiagnostics
         ServiceName = serviceName;
         ActivitySource = new ActivitySource(serviceName);
     }
+
+    public void Dispose() => ActivitySource.Dispose();
 }

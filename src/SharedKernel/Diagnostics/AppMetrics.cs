@@ -6,7 +6,7 @@ namespace SharedKernel.Diagnostics;
 /// Application-level metrics using System.Diagnostics.Metrics.
 /// No OpenTelemetry dependency -- OTel reads these via AddMeter().
 /// </summary>
-public sealed class AppMetrics
+public sealed class AppMetrics : IDisposable
 {
     private readonly Meter _meter;
 
@@ -14,6 +14,7 @@ public sealed class AppMetrics
     public Counter<long> DocumentsReviewed { get; }
     public Counter<long> ReviewsApproved { get; }
     public Counter<long> ReviewsCorrected { get; }
+    public Counter<long> FieldsCorrected { get; }
     public Counter<long> OcrSuccessCount { get; }
     public Counter<long> OcrFailureCount { get; }
     public Counter<long> EmbeddingsGenerated { get; }
@@ -32,6 +33,8 @@ public sealed class AppMetrics
             "app.reviews.approved", "reviews", "Total reviews approved without corrections");
         ReviewsCorrected = _meter.CreateCounter<long>(
             "app.reviews.corrected", "reviews", "Total reviews with field corrections");
+        FieldsCorrected = _meter.CreateCounter<long>(
+            "app.fields.corrected", "fields", "Total individual field corrections");
         OcrSuccessCount = _meter.CreateCounter<long>(
             "app.ocr.success", "operations", "Total successful OCR operations");
         OcrFailureCount = _meter.CreateCounter<long>(
@@ -43,4 +46,6 @@ public sealed class AppMetrics
         OcrProcessingDuration = _meter.CreateHistogram<double>(
             "app.ocr.duration", "ms", "OCR processing duration in milliseconds");
     }
+
+    public void Dispose() => _meter.Dispose();
 }
