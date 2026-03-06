@@ -69,6 +69,18 @@ public sealed class TenantResolutionMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_MetricsPath_SkipsExtractionAndCallsNext()
+    {
+        var context = MakeContext(null, path: "/metrics");
+        var tenantCtx = new RequestTenantContext();
+
+        await _middleware.InvokeAsync(context, tenantCtx);
+
+        Assert.True(_nextCalled);
+        Assert.Null(tenantCtx.TenantId);
+    }
+
+    [Fact]
     public async Task InvokeAsync_MissingClaim_Returns401()
     {
         var context = MakeContext(null);

@@ -2,6 +2,7 @@ using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
+using SharedKernel.Diagnostics;
 
 namespace Api.Application.Commands;
 
@@ -10,15 +11,18 @@ public sealed class CorrectFieldHandler
     private readonly IDocumentRepository _documentRepository;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly ILogger<CorrectFieldHandler> _logger;
+    private readonly AppMetrics? _metrics;
 
     public CorrectFieldHandler(
         IDocumentRepository documentRepository,
         IAuditLogRepository auditLogRepository,
-        ILogger<CorrectFieldHandler> logger)
+        ILogger<CorrectFieldHandler> logger,
+        AppMetrics? metrics = null)
     {
         _documentRepository = documentRepository;
         _auditLogRepository = auditLogRepository;
         _logger = logger;
+        _metrics = metrics;
     }
 
     public async Task<Result<Unit>> HandleAsync(
@@ -51,6 +55,8 @@ public sealed class CorrectFieldHandler
         var saveDocResult = await _documentRepository.UpdateAsync(document, ct);
         if (saveDocResult.IsFailure)
             return Result<Unit>.Failure(saveDocResult.Error);
+
+        _metrics?.FieldsCorrected.Add(1);
 
         var auditEntry = AuditLogEntry.RecordFieldCorrected(
             tid, did, reviewerId, fieldName, previousValue, correctedValue);

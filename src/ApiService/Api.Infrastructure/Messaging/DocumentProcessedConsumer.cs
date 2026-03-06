@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Api.Application.Commands;
 using Api.Domain.Aggregates;
 using Api.Domain.Ports;
@@ -36,6 +37,13 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
     public async Task Consume(ConsumeContext<DocumentProcessedEvent> context)
     {
         var message = context.Message;
+
+        using var _ = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["TenantId"] = message.TenantId,
+            ["DocumentId"] = message.DocumentId,
+            ["TraceId"] = Activity.Current?.TraceId.ToString()
+        });
 
         _logger.LogInformation(
             "Received DocumentProcessedEvent. DocumentId={DocumentId} TenantId={TenantId} FieldCount={FieldCount}",

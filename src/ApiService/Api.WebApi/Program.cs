@@ -13,9 +13,41 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using FluentValidation;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using SharedKernel;
+using SharedKernel.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ---------------------------------------------------------------------------
+// Observability -- OpenTelemetry distributed tracing + structured logging
+// ---------------------------------------------------------------------------
+var serviceDiagnostics = new ServiceDiagnostics("ApiService");
+var appMetrics = new AppMetrics(serviceDiagnostics.ServiceName);
+builder.Services.AddSingleton(serviceDiagnostics);
+builder.Services.AddSingleton(appMetrics);
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource(serviceDiagnostics.ServiceName)
+        .AddSource("MassTransit")
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddMeter("MassTransit")
+        .AddMeter(serviceDiagnostics.ServiceName)
+        .AddPrometheusExporter());
+
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeScopes = true;
+    logging.IncludeFormattedMessage = true;
+});
 
 // ---------------------------------------------------------------------------
 // Configuration -- all from environment/config, never hardcoded (12-factor)
@@ -82,12 +114,39 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 
+var rabbitHost = builder.Configuration["RabbitMQ__Host"]
+    ?? builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+var rabbitUser = builder.Configuration["RabbitMQ__Username"]
+    ?? builder.Configuration["RabbitMQ:Username"] ?? "guest";
+var rabbitPass = builder.Configuration["RabbitMQ__Password"]
+    ?? builder.Configuration["RabbitMQ:Password"] ?? "guest";
+
 builder.Services.AddHealthChecks()
     .AddNpgSql(
         connectionString,
         name: "postgres",
         failureStatus: HealthStatus.Unhealthy,
-        tags: ["db", "postgres"]);
+        tags: ["db", "postgres"])
+    .AddRabbitMQ(async _ =>
+    {
+        var factory = new RabbitMQ.Client.ConnectionFactory
+        {
+            HostName = rabbitHost,
+            UserName = rabbitUser,
+            Password = rabbitPass
+        };
+        return await factory.CreateConnectionAsync();
+    }, name: "rabbitmq", tags: ["messaging"])
+    .AddUrlGroup(
+        new Uri($"{builder.Configuration["OcrWorker:BaseUrl"] ?? "http://ocr-worker:8080"}/health"),
+        name: "ocr-worker",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["downstream"])
+    .AddUrlGroup(
+        new Uri($"{builder.Configuration["RagService:BaseUrl"] ?? "http://rag-service:8080"}/health"),
+        name: "rag-service",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["downstream"]);
 
 builder.Services.AddCors(options =>
 {
@@ -223,7 +282,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 app.MapControllers();
-
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {

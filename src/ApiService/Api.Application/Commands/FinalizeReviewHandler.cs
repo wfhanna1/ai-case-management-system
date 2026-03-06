@@ -2,6 +2,7 @@ using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
+using SharedKernel.Diagnostics;
 
 namespace Api.Application.Commands;
 
@@ -10,15 +11,18 @@ public sealed class FinalizeReviewHandler
     private readonly IDocumentRepository _documentRepository;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly ILogger<FinalizeReviewHandler> _logger;
+    private readonly AppMetrics? _metrics;
 
     public FinalizeReviewHandler(
         IDocumentRepository documentRepository,
         IAuditLogRepository auditLogRepository,
-        ILogger<FinalizeReviewHandler> logger)
+        ILogger<FinalizeReviewHandler> logger,
+        AppMetrics? metrics = null)
     {
         _documentRepository = documentRepository;
         _auditLogRepository = auditLogRepository;
         _logger = logger;
+        _metrics = metrics;
     }
 
     public async Task<Result<Unit>> HandleAsync(
@@ -64,6 +68,12 @@ public sealed class FinalizeReviewHandler
         var saveResult = await _documentRepository.UpdateAsync(document, ct);
         if (saveResult.IsFailure)
             return Result<Unit>.Failure(saveResult.Error);
+
+        _metrics?.DocumentsReviewed.Add(1);
+        if (document.ExtractedFields.Any(f => f.CorrectedValue is not null))
+            _metrics?.ReviewsCorrected.Add(1);
+        else
+            _metrics?.ReviewsApproved.Add(1);
 
         var auditEntry = AuditLogEntry.RecordReviewFinalized(tid, did, reviewerId);
         var auditResult = await _auditLogRepository.SaveAsync(auditEntry, ct);
