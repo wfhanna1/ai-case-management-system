@@ -657,11 +657,6 @@ public sealed class ReviewControllerTests
         public void SetFailure(Error error)
             => _result = Result<IReadOnlyList<SimilarDocumentResult>>.Failure(error);
 
-        public Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarAsync(
-            Guid documentId, Guid tenantId, int topK = 5, CancellationToken ct = default)
-            => Task.FromResult(_result ?? Result<IReadOnlyList<SimilarDocumentResult>>.Success(
-                Array.Empty<SimilarDocumentResult>() as IReadOnlyList<SimilarDocumentResult>));
-
         public Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarByTextAsync(
             string textContent, Guid tenantId, int topK = 5, CancellationToken ct = default)
             => Task.FromResult(_result ?? Result<IReadOnlyList<SimilarDocumentResult>>.Success(

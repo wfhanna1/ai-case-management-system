@@ -217,10 +217,6 @@ public sealed class GetSimilarCasesHandlerTests
 
         public StubRagClient(IReadOnlyList<SimilarDocumentResult>? results) => _results = results;
 
-        public Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarAsync(
-            Guid documentId, Guid tenantId, int topK = 5, CancellationToken ct = default)
-            => throw new NotImplementedException("Should use FindSimilarByTextAsync");
-
         public Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarByTextAsync(
             string textContent, Guid tenantId, int topK = 5, CancellationToken ct = default)
         {

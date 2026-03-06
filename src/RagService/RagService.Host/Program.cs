@@ -153,5 +153,3 @@ app.MapPost("/api/similar-by-text", async (
 });
 
 app.Run();
-
-internal sealed record SimilarByTextRequest(string Text, Guid TenantId, int TopK = 5);
