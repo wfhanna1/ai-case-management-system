@@ -12,6 +12,12 @@ public interface IRagServiceClient
         Guid tenantId,
         int topK = 5,
         CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<SimilarDocumentResult>>> FindSimilarByTextAsync(
+        string textContent,
+        Guid tenantId,
+        int topK = 5,
+        CancellationToken ct = default);
 }
 
 public sealed record SimilarDocumentResult(

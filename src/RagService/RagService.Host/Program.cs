@@ -78,6 +78,7 @@ builder.Services.AddRagMessaging(builder.Configuration);
 builder.Services.AddSingleton<IEmbeddingPort, MockEmbeddingAdapter>();
 builder.Services.AddSingleton<EmbedDocumentHandler>();
 builder.Services.AddSingleton<SimilarDocumentsHandler>();
+builder.Services.AddSingleton<FindSimilarByTextHandler>();
 
 var qdrantHost = builder.Configuration["Qdrant:Host"] ?? "localhost";
 var qdrantPort = int.TryParse(builder.Configuration["Qdrant:Port"], out var p) ? p : 6334;
@@ -136,4 +137,21 @@ app.MapGet("/api/similar", async (
     return Results.Ok(new { data = result.Value });
 });
 
+app.MapPost("/api/similar-by-text", async (
+    SimilarByTextRequest request,
+    FindSimilarByTextHandler handler,
+    CancellationToken ct) =>
+{
+    if (request.TopK is < 1 or > 50)
+        return Results.BadRequest(new { error = "topK must be between 1 and 50." });
+
+    var result = await handler.HandleAsync(request.Text, request.TenantId, request.TopK, ct);
+    if (result.IsFailure)
+        return Results.Problem(result.Error.Message, statusCode: 500);
+
+    return Results.Ok(new { data = result.Value });
+});
+
 app.Run();
+
+internal sealed record SimilarByTextRequest(string Text, Guid TenantId, int TopK = 5);
