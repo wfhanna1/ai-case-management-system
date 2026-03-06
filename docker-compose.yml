@@ -22,6 +22,7 @@ services:
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       Storage__BasePath: /app/storage
+      Otel__Endpoint: ${OTEL_ENDPOINT:-}
     volumes:
       - api_storage:/app/storage
     healthcheck:
@@ -41,8 +42,11 @@ services:
     build:
       context: .
       dockerfile: src/OcrWorkerService/OcrWorker.Host/Dockerfile
+    ports:
+      - "${OCR_WORKER_HOST_PORT:-5001}:8080"
     environment:
-      DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: >-
         Host=postgres;
         Database=${POSTGRES_DB:-intake_processor};
@@ -51,6 +55,13 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
+      Otel__Endpoint: ${OTEL_ENDPOINT:-}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,7 +74,7 @@ services:
       context: .
       dockerfile: src/RagService/RagService.Host/Dockerfile
     environment:
-      DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__DefaultConnection: >-
         Host=postgres;
         Database=${POSTGRES_DB:-intake_processor};
@@ -74,6 +85,8 @@ services:
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       Qdrant__Host: qdrant
       Qdrant__Port: ${QDRANT_GRPC_PORT:-6334}
+      Qdrant__HttpPort: "6333"
+      Otel__Endpoint: ${OTEL_ENDPOINT:-}
     depends_on:
       qdrant:
         condition: service_healthy

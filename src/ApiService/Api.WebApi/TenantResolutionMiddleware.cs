@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
 
@@ -16,6 +17,7 @@ public sealed class TenantResolutionMiddleware
         new("/health"),
         new("/swagger"),
         new("/api/auth"),
+        new("/metrics"),
     ];
 
     private readonly RequestDelegate _next;
@@ -59,7 +61,15 @@ public sealed class TenantResolutionMiddleware
         }
 
         tenantContext.SetTenant(tenantId);
-        await _next(context);
+
+        using (_logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["TenantId"] = tenantId.Value,
+            ["TraceId"] = Activity.Current?.TraceId.ToString()
+        }))
+        {
+            await _next(context);
+        }
     }
 
     /// <summary>

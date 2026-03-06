@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MassTransit;
 using Messaging.Contracts.Events;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,13 @@ public sealed class EmbeddingRequestedConsumer : IConsumer<EmbeddingRequestedEve
     public async Task Consume(ConsumeContext<EmbeddingRequestedEvent> context)
     {
         var message = context.Message;
+
+        using var _ = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["TenantId"] = message.TenantId,
+            ["DocumentId"] = message.DocumentId,
+            ["TraceId"] = Activity.Current?.TraceId.ToString()
+        });
 
         _logger.LogInformation(
             "Received EmbeddingRequestedEvent. DocumentId={DocumentId} TenantId={TenantId} FieldCount={FieldCount}",
