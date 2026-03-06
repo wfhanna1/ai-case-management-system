@@ -141,7 +141,7 @@ public sealed class SwaggerContractTests : IClassFixture<SwaggerContractTests.Te
     {
         public Task<Result<Unit>> PublishDocumentUploadedAsync(
             DocumentId documentId, Guid? templateId, TenantId tenantId,
-            string fileName, CancellationToken ct = default)
+            string fileName, string storageKey, CancellationToken ct = default)
             => Task.FromResult(Result<Unit>.Success(Unit.Value));
 
         public Task<Result<Unit>> PublishEmbeddingRequestedAsync(

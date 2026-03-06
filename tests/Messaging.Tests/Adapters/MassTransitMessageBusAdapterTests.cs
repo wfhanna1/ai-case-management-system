@@ -36,7 +36,8 @@ public sealed class MassTransitMessageBusAdapterTests
                 documentId: documentId,
                 templateId: templateId,
                 tenantId: tenantId,
-                fileName: "patient-form.pdf");
+                fileName: "patient-form.pdf",
+                storageKey: "tenants/abc/patient-form.pdf");
 
             Assert.True(result.IsSuccess);
             Assert.True(await harness.Published.Any<DocumentUploadedEvent>());
@@ -49,6 +50,7 @@ public sealed class MassTransitMessageBusAdapterTests
             Assert.Equal(templateId, published.Context.Message.TemplateId);
             Assert.Equal(tenantId.Value, published.Context.Message.TenantId);
             Assert.Equal("patient-form.pdf", published.Context.Message.FileName);
+            Assert.Equal("tenants/abc/patient-form.pdf", published.Context.Message.StorageKey);
         }
         finally
         {
@@ -113,7 +115,8 @@ public sealed class MassTransitMessageBusAdapterTests
             documentId: DocumentId.New(),
             templateId: Guid.NewGuid(),
             tenantId: TenantId.New(),
-            fileName: "file.pdf");
+            fileName: "file.pdf",
+            storageKey: "tenants/abc/file.pdf");
 
         Assert.True(result.IsFailure);
         Assert.Equal("PUBLISH_FAILED", result.Error.Code);

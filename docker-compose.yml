@@ -56,6 +56,11 @@ services:
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       Otel__Endpoint: ${OTEL_ENDPOINT:-}
+      Ocr__Mode: tesseract
+      Ocr__TessDataPath: /usr/share/tesseract-ocr/5/tessdata
+      FileStorage__BasePath: /app/storage
+    volumes:
+      - api_storage:/app/storage:ro
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
       interval: 15s

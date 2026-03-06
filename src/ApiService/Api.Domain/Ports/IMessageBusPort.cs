@@ -18,6 +18,7 @@ public interface IMessageBusPort
         Guid? templateId,
         TenantId tenantId,
         string fileName,
+        string storageKey,
         CancellationToken ct = default);
 
     /// <summary>

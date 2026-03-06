@@ -8,6 +8,7 @@ using OcrWorker.Application;
 using OcrWorker.Domain.Ports;
 using OcrWorker.Infrastructure.Messaging;
 using OcrWorker.Infrastructure.Ocr;
+using SharedKernel;
 
 namespace Messaging.Tests.Consumers;
 
@@ -23,12 +24,22 @@ public sealed class DocumentUploadedConsumerTests
         return new ServiceCollection()
             .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
             .AddSingleton<IOcrPort, MockOcrAdapter>()
+            .AddSingleton<IFileStorageReadPort, StubFileStorageReadPort>()
             .AddTransient<ProcessDocumentHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentUploadedConsumer>();
             })
             .BuildServiceProvider(true);
+    }
+
+    private sealed class StubFileStorageReadPort : IFileStorageReadPort
+    {
+        public Task<Result<Stream>> DownloadAsync(string storageKey, CancellationToken ct = default)
+        {
+            Stream stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("fake document content"));
+            return Task.FromResult(Result<Stream>.Success(stream));
+        }
     }
 
     [Fact]
@@ -49,6 +60,7 @@ public sealed class DocumentUploadedConsumerTests
                 TemplateId: Guid.NewGuid(),
                 TenantId: tenantId,
                 FileName: "test-intake.pdf",
+                StorageKey: "tenants/test/test-intake.pdf",
                 UploadedAt: DateTimeOffset.UtcNow));
 
             // Consumer received the event
@@ -86,6 +98,7 @@ public sealed class DocumentUploadedConsumerTests
                 TemplateId: Guid.NewGuid(),
                 TenantId: Guid.NewGuid(),
                 FileName: "valid.pdf",
+                StorageKey: "tenants/test/valid.pdf",
                 UploadedAt: DateTimeOffset.UtcNow));
 
             Assert.True(await harness.Consumed.Any<DocumentUploadedEvent>());

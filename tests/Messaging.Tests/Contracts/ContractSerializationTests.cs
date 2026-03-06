@@ -24,6 +24,7 @@ public sealed class ContractSerializationTests
             TemplateId: Guid.NewGuid(),
             TenantId: Guid.NewGuid(),
             FileName: "intake-2024.pdf",
+            StorageKey: "tenants/abc/intake-2024.pdf",
             UploadedAt: new DateTimeOffset(2024, 1, 15, 10, 30, 0, TimeSpan.Zero));
 
         var json = JsonSerializer.Serialize(original, SerializerOptions);
@@ -34,6 +35,7 @@ public sealed class ContractSerializationTests
         Assert.Equal(original.TemplateId, deserialized.TemplateId);
         Assert.Equal(original.TenantId, deserialized.TenantId);
         Assert.Equal(original.FileName, deserialized.FileName);
+        Assert.Equal(original.StorageKey, deserialized.StorageKey);
         Assert.Equal(original.UploadedAt, deserialized.UploadedAt);
     }
 
@@ -135,6 +137,7 @@ public sealed class ContractSerializationTests
         Assert.Contains("DocumentId", names);
         Assert.Contains("TenantId", names);
         Assert.Contains("FileName", names);
+        Assert.Contains("StorageKey", names);
         Assert.Contains("UploadedAt", names);
     }
 
@@ -147,6 +150,7 @@ public sealed class ContractSerializationTests
         Assert.Equal(typeof(Guid), props["DocumentId"]);
         Assert.Equal(typeof(Guid), props["TenantId"]);
         Assert.Equal(typeof(string), props["FileName"]);
+        Assert.Equal(typeof(string), props["StorageKey"]);
         Assert.Equal(typeof(DateTimeOffset), props["UploadedAt"]);
     }
 

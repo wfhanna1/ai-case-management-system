@@ -24,6 +24,7 @@ public sealed class MassTransitMessageBusAdapter : IMessageBusPort
         Guid? templateId,
         TenantId tenantId,
         string fileName,
+        string storageKey,
         CancellationToken ct = default)
     {
         try
@@ -33,6 +34,7 @@ public sealed class MassTransitMessageBusAdapter : IMessageBusPort
                 TemplateId: templateId,
                 TenantId: tenantId.Value,
                 FileName: fileName,
+                StorageKey: storageKey,
                 UploadedAt: DateTimeOffset.UtcNow);
 
             await _publishEndpoint.Publish(message, ct);

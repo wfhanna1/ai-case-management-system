@@ -5,6 +5,7 @@ using OcrWorker.Domain.Ports;
 using OcrWorker.Host;
 using OcrWorker.Infrastructure.Messaging;
 using OcrWorker.Infrastructure.Ocr;
+using OcrWorker.Infrastructure.Storage;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -65,10 +66,20 @@ builder.Services.AddHealthChecks()
     }, name: "rabbitmq", tags: ["messaging"]);
 
 // ---------------------------------------------------------------------------
-// OCR -- Mock adapter for development (swap for real adapter in production)
+// OCR -- configurable via Ocr:Mode (mock or tesseract)
 // ---------------------------------------------------------------------------
-builder.Services.AddSingleton<IOcrPort, MockOcrAdapter>();
+var ocrMode = builder.Configuration["Ocr:Mode"] ?? "mock";
+if (string.Equals(ocrMode, "tesseract", StringComparison.OrdinalIgnoreCase))
+{
+    var tessDataPath = builder.Configuration["Ocr:TessDataPath"] ?? "/usr/share/tesseract-ocr/5/tessdata";
+    builder.Services.AddSingleton<IOcrPort>(new TesseractOcrAdapter(tessDataPath));
+}
+else
+{
+    builder.Services.AddSingleton<IOcrPort, MockOcrAdapter>();
+}
 builder.Services.AddTransient<ProcessDocumentHandler>();
+builder.Services.AddSingleton<IFileStorageReadPort, LocalFileStorageReadAdapter>();
 
 // ---------------------------------------------------------------------------
 // Messaging -- RabbitMQ via MassTransit (12-factor: config from env)
