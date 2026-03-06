@@ -431,3 +431,6 @@ FodyWeavers.xsd
 node_modules/
 dist/
 .env.local
+
+# Git worktrees
+.worktrees/
