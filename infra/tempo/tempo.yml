@@ -15,6 +15,20 @@ distributor:
 ingester:
   max_block_duration: 5m
 
+# Disable metrics-generator to avoid "empty ring" errors in single-instance mode
+metrics_generator:
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    path: /var/tempo/metrics
+    remote_write: []
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: []
+
 storage:
   trace:
     backend: local
