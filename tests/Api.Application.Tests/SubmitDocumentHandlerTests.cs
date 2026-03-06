@@ -149,7 +149,7 @@ public sealed class SubmitDocumentHandlerTests
         public bool PublishCalled { get; private set; }
 
         public Task<Result<Unit>> PublishDocumentUploadedAsync(
-            DocumentId documentId, Guid? templateId, TenantId tenantId, string fileName, CancellationToken ct = default)
+            DocumentId documentId, Guid? templateId, TenantId tenantId, string fileName, string storageKey, CancellationToken ct = default)
         {
             PublishCalled = true;
             return Task.FromResult(PublishResult);

@@ -9,4 +9,5 @@ public record DocumentUploadedEvent(
     Guid? TemplateId,
     Guid TenantId,
     string FileName,
+    string StorageKey,
     DateTimeOffset UploadedAt);

@@ -52,7 +52,7 @@ public sealed class SubmitDocumentHandler
         }
 
         var publishResult = await _messageBus.PublishDocumentUploadedAsync(
-            document.Id, null, tenantId, request.FileName, ct);
+            document.Id, null, tenantId, request.FileName, document.StorageKey, ct);
 
         if (publishResult.IsFailure)
         {

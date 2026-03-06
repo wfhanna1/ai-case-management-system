@@ -34,7 +34,7 @@ public sealed class TenantHeaderPublishFilterTests
         try
         {
             await harness.Bus.Publish(new DocumentUploadedEvent(
-                Guid.NewGuid(), Guid.NewGuid(), tenantId.Value, "test.pdf", DateTimeOffset.UtcNow));
+                Guid.NewGuid(), Guid.NewGuid(), tenantId.Value, "test.pdf", "tenants/test/test.pdf", DateTimeOffset.UtcNow));
 
             Assert.True(await harness.Published.Any<DocumentUploadedEvent>());
 
@@ -73,7 +73,7 @@ public sealed class TenantHeaderPublishFilterTests
         try
         {
             await harness.Bus.Publish(new DocumentUploadedEvent(
-                Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "test.pdf", DateTimeOffset.UtcNow));
+                Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "test.pdf", "tenants/test/test.pdf", DateTimeOffset.UtcNow));
 
             Assert.True(await harness.Published.Any<DocumentUploadedEvent>());
 
