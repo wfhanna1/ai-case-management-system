@@ -23,6 +23,7 @@ services:
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       Storage__BasePath: /app/storage
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_SERVICE_NAME: ApiService
     volumes:
       - api_storage:/app/storage
     healthcheck:
@@ -37,7 +38,7 @@ services:
       rabbitmq:
         condition: service_healthy
       tempo:
-        condition: service_healthy
+        condition: service_started
     logging:
       driver: loki
       options:
@@ -66,6 +67,7 @@ services:
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_SERVICE_NAME: OcrWorkerService
       Ocr__Mode: tesseract
       Ocr__TessDataPath: /usr/share/tesseract-ocr/5/tessdata
       FileStorage__BasePath: /app/storage
@@ -83,7 +85,7 @@ services:
       rabbitmq:
         condition: service_healthy
       tempo:
-        condition: service_healthy
+        condition: service_started
     logging:
       driver: loki
       options:
@@ -115,6 +117,7 @@ services:
       Qdrant__Port: ${QDRANT_GRPC_PORT:-6334}
       Qdrant__HttpPort: "6333"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_SERVICE_NAME: RagService
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
       interval: 15s
@@ -127,7 +130,7 @@ services:
       rabbitmq:
         condition: service_healthy
       tempo:
-        condition: service_healthy
+        condition: service_started
     logging:
       driver: loki
       options:
@@ -248,7 +251,7 @@ services:
     restart: unless-stopped
 
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.7.2
     ports:
       - "${TEMPO_HOST_PORT:-3200}:3200"    # Tempo HTTP API
       - "${TEMPO_OTLP_PORT:-4317}:4317"    # OTLP gRPC receiver
@@ -256,12 +259,6 @@ services:
       - ./infra/tempo/tempo.yml:/etc/tempo/config.yaml:ro
       - tempo_data:/var/tempo
     command: ["-config.file=/etc/tempo/config.yaml"]
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     restart: unless-stopped
 
   loki:

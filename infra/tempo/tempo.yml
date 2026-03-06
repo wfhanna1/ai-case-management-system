@@ -12,6 +12,9 @@ distributor:
         http:
           endpoint: "0.0.0.0:4318"
 
+ingester:
+  max_block_duration: 5m
+
 storage:
   trace:
     backend: local
@@ -19,7 +22,3 @@ storage:
       path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
-
-metrics_generator:
-  storage:
-    path: /var/tempo/metrics
