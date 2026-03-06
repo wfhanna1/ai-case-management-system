@@ -136,7 +136,17 @@ builder.Services.AddHealthChecks()
             Password = rabbitPass
         };
         return await factory.CreateConnectionAsync();
-    }, name: "rabbitmq", tags: ["messaging"]);
+    }, name: "rabbitmq", tags: ["messaging"])
+    .AddUrlGroup(
+        new Uri($"{builder.Configuration["OcrWorker:BaseUrl"] ?? "http://ocr-worker:8080"}/health"),
+        name: "ocr-worker",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["downstream"])
+    .AddUrlGroup(
+        new Uri($"{builder.Configuration["RagService:BaseUrl"] ?? "http://rag-service:8080"}/health"),
+        name: "rag-service",
+        failureStatus: HealthStatus.Degraded,
+        tags: ["downstream"]);
 
 builder.Services.AddCors(options =>
 {
