@@ -84,17 +84,28 @@ public sealed class TesseractOcrAdapterTests
     }
 
     [Fact]
-    public async Task ExtractTextAsync_WithPdfFile_ReturnsRawTextFromPdf()
+    public async Task ExtractTextAsync_WithPdfFile_DoesNotThrow()
     {
         var sut = new TesseractOcrAdapter(TessDataPath);
 
         var pdfPath = GetFixturePath("test-document.pdf");
         using var stream = File.OpenRead(pdfPath);
 
+        // Minimal test PDF may not render in Docnet, but the adapter must
+        // handle it gracefully (return a Result, never throw).
         var result = await sut.ExtractTextAsync(stream, "test-document.pdf");
 
-        // PDF OCR can succeed or fail gracefully depending on PDF content
-        Assert.True(result.IsSuccess || result.Error.Code == "OCR_ERROR");
+        // The adapter must always return a valid Result (success or typed error)
+        Assert.NotNull(result);
+        if (result.IsFailure)
+        {
+            Assert.Equal("OCR_ERROR", result.Error.Code);
+            Assert.False(string.IsNullOrWhiteSpace(result.Error.Message));
+        }
+        else
+        {
+            Assert.False(string.IsNullOrWhiteSpace(result.Value.RawText));
+        }
     }
 
     [Fact]

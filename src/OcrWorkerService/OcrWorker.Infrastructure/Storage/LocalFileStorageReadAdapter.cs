@@ -24,9 +24,9 @@ public sealed class LocalFileStorageReadAdapter : IFileStorageReadPort
     public Task<Result<Stream>> DownloadAsync(string storageKey, CancellationToken ct = default)
     {
         var fullPath = Path.GetFullPath(Path.Combine(_basePath, storageKey));
-        var baseFull = Path.GetFullPath(_basePath);
+        var baseFull = Path.GetFullPath(_basePath + Path.DirectorySeparatorChar);
 
-        if (!fullPath.StartsWith(baseFull, StringComparison.OrdinalIgnoreCase))
+        if (!fullPath.StartsWith(baseFull, StringComparison.Ordinal))
         {
             _logger.LogWarning("Path traversal attempt detected for storage key {StorageKey}", storageKey);
             return Task.FromResult(Result<Stream>.Failure(
