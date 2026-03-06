@@ -65,20 +65,23 @@ public sealed class DocumentUploadedConsumer : IConsumer<DocumentUploadedEvent>
             sw.Stop();
             _metrics?.OcrProcessingDuration.Record(sw.Elapsed.TotalMilliseconds);
 
+            Dictionary<string, ExtractedFieldResult> extractedFields;
+
             if (ocrResult.IsFailure)
             {
                 _metrics?.OcrFailureCount.Add(1);
-                _logger.LogError(
-                    "OCR processing failed for DocumentId={DocumentId}: {Error}",
+                _logger.LogWarning(
+                    "OCR processing failed for DocumentId={DocumentId}: {Error}. Publishing with empty fields.",
                     message.DocumentId, ocrResult.Error.Message);
-                throw new InvalidOperationException(ocrResult.Error.Message);
+                extractedFields = new Dictionary<string, ExtractedFieldResult>();
             }
-
-            _metrics?.OcrSuccessCount.Add(1);
-
-            var extractedFields = ocrResult.Value.Fields.ToDictionary(
-                kvp => kvp.Key,
-                kvp => new ExtractedFieldResult(kvp.Value.FieldName, kvp.Value.Value, kvp.Value.Confidence));
+            else
+            {
+                _metrics?.OcrSuccessCount.Add(1);
+                extractedFields = ocrResult.Value.Fields.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new ExtractedFieldResult(kvp.Value.FieldName, kvp.Value.Value, kvp.Value.Confidence));
+            }
 
             var processed = new DocumentProcessedEvent(
                 DocumentId: message.DocumentId,

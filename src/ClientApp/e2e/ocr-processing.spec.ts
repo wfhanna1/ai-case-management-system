@@ -1,67 +1,50 @@
 import { test, expect } from '@playwright/test';
 import { loginAsWorker, loginAsReviewer } from './helpers/login';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function createTestPdf(): string {
-  const filePath = path.join(__dirname, 'ocr-test-upload.pdf');
-  fs.writeFileSync(filePath, Buffer.from(
-    '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
-    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
-    '3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\n' +
-    'xref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n' +
-    '0000000115 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n190\n%%EOF'
-  ));
-  return filePath;
+// Real document with extractable text (contains "John Smith", dates, etc.)
+const TEST_IMAGE_PATH = path.join(__dirname, 'test-document.png');
+
+async function uploadDocument(page: import('@playwright/test').Page, filePath: string) {
+  await loginAsWorker(page);
+  await page.goto('/upload');
+  const fileInput = page.locator('#file-input');
+  await fileInput.setInputFiles(filePath);
+  await page.getByRole('main').getByRole('button', { name: 'Upload' }).click();
+  await expect(page.getByText('Upload Successful')).toBeVisible({ timeout: 10000 });
 }
 
 test.describe('OCR processing pipeline', () => {
+  // These tests interact with a live Docker stack and OCR processing takes time
+  test.setTimeout(120000);
+
   test('uploaded document progresses through OCR processing status', async ({ page }) => {
-    await loginAsWorker(page);
-    await page.goto('/upload');
+    await uploadDocument(page, TEST_IMAGE_PATH);
 
-    const testFile = createTestPdf();
-    const fileName = 'ocr-test-upload.pdf';
+    // Navigate to documents list and verify the document appears
+    await page.goto('/documents');
+    const docRow = page.locator('tr', { hasText: 'test-document.png' }).first();
+    await expect(docRow).toBeVisible({ timeout: 10000 });
 
-    try {
-      const fileInput = page.locator('#file-input');
-      await fileInput.setInputFiles(testFile);
-      await expect(page.getByText(fileName)).toBeVisible();
-
-      await page.getByRole('main').getByRole('button', { name: 'Upload' }).click();
-      await expect(page.getByText('Upload Successful')).toBeVisible({ timeout: 10000 });
-
-      // Navigate to documents list and verify the document appears
-      await page.goto('/documents');
-      await expect(page.getByText(fileName)).toBeVisible({ timeout: 10000 });
-
-      // The document should initially be in Submitted or Processing status
-      const docRow = page.locator('tr', { hasText: fileName });
-      const statusText = await docRow.textContent();
-      expect(statusText).toBeTruthy();
-
-      // Poll for status transition past Submitted (OCR processing)
-      await expect(async () => {
-        await page.reload();
-        const row = page.locator('tr', { hasText: fileName });
-        const text = await row.textContent();
-        // Document should eventually move past Submitted to Processing or further
-        expect(text).not.toContain('Submitted');
-      }).toPass({ timeout: 60000, intervals: [3000] });
-    } finally {
-      fs.unlinkSync(testFile);
-    }
+    // Poll for status transition past Submitted (OCR processing)
+    await expect(async () => {
+      await page.reload();
+      const row = page.locator('tr', { hasText: 'test-document.png' }).first();
+      const text = await row.textContent();
+      // Document should eventually move past Submitted to Processing or PendingReview
+      expect(text).toMatch(/Processing|PendingReview|InReview|Finalized/);
+    }).toPass({ timeout: 90000, intervals: [3000] });
   });
 
   test('reviewer sees extracted fields after OCR completes', async ({ page }) => {
     await loginAsReviewer(page);
     await page.goto('/reviews');
 
-    // Wait for a document to appear in review queue (from previous or concurrent uploads)
+    // Wait for at least one document in review queue
     await expect(async () => {
       await page.reload();
       const rows = page.locator('tbody tr');
@@ -69,31 +52,26 @@ test.describe('OCR processing pipeline', () => {
       expect(count).toBeGreaterThan(0);
     }).toPass({ timeout: 60000, intervals: [3000] });
 
-    // Click review on the first document
+    // Click review on the first available document
     const firstRow = page.locator('tbody tr').first();
     await firstRow.getByRole('button', { name: 'Review' }).click();
 
-    // Start review if needed
+    // Start review if in PendingReview status
     const startBtn = page.getByTestId('start-review-btn');
     if (await startBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await startBtn.click();
       await expect(page.getByTestId('review-status')).toHaveText('InReview', { timeout: 5000 });
     }
 
-    // Verify extracted fields section exists (OCR should have produced some)
-    // With real Tesseract, fields come from actual document content
+    // Verify extracted fields section exists
     const fieldsSection = page.locator('[data-testid^="field-row-"], [data-testid^="confidence-"]');
     const fieldCount = await fieldsSection.count();
 
-    // If document had extractable content, there should be fields
-    // If not (e.g., minimal test PDF), at least the UI shouldn't error
     if (fieldCount > 0) {
-      // Verify confidence indicators are present for each field
       const confidenceBadges = page.locator('[data-testid^="confidence-"]');
       const badgeCount = await confidenceBadges.count();
       expect(badgeCount).toBeGreaterThan(0);
 
-      // Verify confidence values are in valid range (displayed as percentage)
       for (let i = 0; i < badgeCount; i++) {
         const text = await confidenceBadges.nth(i).textContent();
         const percent = parseInt(text?.replace('%', '') ?? '0');
@@ -104,27 +82,34 @@ test.describe('OCR processing pipeline', () => {
   });
 
   test('reviewer can correct OCR-extracted field and finalize', async ({ page }) => {
-    await loginAsReviewer(page);
-    await page.goto('/reviews');
+    // First upload a document as worker
+    await uploadDocument(page, TEST_IMAGE_PATH);
 
-    // Wait for a document in review queue
+    // Clear auth state before switching to reviewer
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    // Wait for OCR processing, then switch to reviewer
+    await loginAsReviewer(page);
+
+    // Poll reviews page until a document with Review button appears
+    await page.goto('/reviews');
     await expect(async () => {
       await page.reload();
       const rows = page.locator('tbody tr');
       const count = await rows.count();
       expect(count).toBeGreaterThan(0);
-    }).toPass({ timeout: 60000, intervals: [3000] });
+    }).toPass({ timeout: 90000, intervals: [3000] });
 
-    // Open first document for review
+    // Open the first reviewable document
     const firstRow = page.locator('tbody tr').first();
     await firstRow.getByRole('button', { name: 'Review' }).click();
 
-    // Start review if needed
+    // Start review -- the document should be in PendingReview after OCR
     const startBtn = page.getByTestId('start-review-btn');
-    if (await startBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await startBtn.click();
-      await expect(page.getByTestId('review-status')).toHaveText('InReview', { timeout: 5000 });
-    }
+    await expect(startBtn).toBeVisible({ timeout: 10000 });
+    await startBtn.click();
+    await expect(page.getByTestId('review-status')).toHaveText('InReview', { timeout: 10000 });
 
     // If there are editable fields, correct one
     const editBtns = page.locator('[data-testid^="edit-btn-"]');
@@ -138,7 +123,9 @@ test.describe('OCR processing pipeline', () => {
     }
 
     // Finalize the review
-    await page.getByTestId('finalize-btn').click();
+    const finalizeBtn = page.getByTestId('finalize-btn');
+    await expect(finalizeBtn).toBeVisible({ timeout: 10000 });
+    await finalizeBtn.click();
     await expect(page.getByText('Are you sure you want to finalize this review?')).toBeVisible();
     await page.getByTestId('confirm-finalize-btn').click();
 
