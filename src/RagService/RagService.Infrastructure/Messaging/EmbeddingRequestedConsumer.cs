@@ -3,6 +3,7 @@ using MassTransit;
 using Messaging.Contracts.Events;
 using Microsoft.Extensions.Logging;
 using RagService.Application;
+using SharedKernel.Diagnostics;
 
 namespace RagService.Infrastructure.Messaging;
 
@@ -15,13 +16,16 @@ public sealed class EmbeddingRequestedConsumer : IConsumer<EmbeddingRequestedEve
 {
     private readonly EmbedDocumentHandler _handler;
     private readonly ILogger<EmbeddingRequestedConsumer> _logger;
+    private readonly AppMetrics? _metrics;
 
     public EmbeddingRequestedConsumer(
         EmbedDocumentHandler handler,
-        ILogger<EmbeddingRequestedConsumer> logger)
+        ILogger<EmbeddingRequestedConsumer> logger,
+        AppMetrics? metrics = null)
     {
         _handler = handler;
         _logger = logger;
+        _metrics = metrics;
     }
 
     public async Task Consume(ConsumeContext<EmbeddingRequestedEvent> context)
@@ -50,12 +54,15 @@ public sealed class EmbeddingRequestedConsumer : IConsumer<EmbeddingRequestedEve
 
         if (result.IsFailure)
         {
+            _metrics?.EmbeddingFailures.Add(1);
             _logger.LogError(
                 "Embedding failed for DocumentId={DocumentId}: {Error}",
                 message.DocumentId, result.Error.Message);
             throw new InvalidOperationException(
                 $"Embedding failed: {result.Error.Message}");
         }
+
+        _metrics?.EmbeddingsGenerated.Add(1);
 
         var completed = new EmbeddingCompletedEvent(
             DocumentId: message.DocumentId,

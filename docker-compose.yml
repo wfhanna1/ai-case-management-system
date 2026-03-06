@@ -75,6 +75,7 @@ services:
       dockerfile: src/RagService/RagService.Host/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: >-
         Host=postgres;
         Database=${POSTGRES_DB:-intake_processor};
@@ -159,6 +160,40 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Observability
+  # ---------------------------------------------------------------------------
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "${PROMETHEUS_HOST_PORT:-9090}:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - api
+      - ocr-worker
+      - rag-service
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "${GRAFANA_HOST_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 # ---------------------------------------------------------------------------
 # Named volumes
 # ---------------------------------------------------------------------------
@@ -168,3 +203,5 @@ volumes:
   rabbitmq_data:
   qdrant_data:
   api_storage:
+  prometheus_data:
+  grafana_data:

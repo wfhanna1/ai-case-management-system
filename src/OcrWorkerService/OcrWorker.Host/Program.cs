@@ -6,6 +6,7 @@ using OcrWorker.Host;
 using OcrWorker.Infrastructure.Messaging;
 using OcrWorker.Infrastructure.Ocr;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using SharedKernel.Diagnostics;
 
@@ -15,7 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Observability -- OpenTelemetry distributed tracing + structured logging
 // ---------------------------------------------------------------------------
 var serviceDiagnostics = new ServiceDiagnostics("OcrWorkerService");
+var appMetrics = new AppMetrics(serviceDiagnostics.ServiceName);
 builder.Services.AddSingleton(serviceDiagnostics);
+builder.Services.AddSingleton(appMetrics);
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
@@ -23,7 +26,13 @@ builder.Services.AddOpenTelemetry()
         .AddSource("MassTransit")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddOtlpExporter());
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddMeter("MassTransit")
+        .AddMeter(serviceDiagnostics.ServiceName)
+        .AddPrometheusExporter());
 
 builder.Logging.AddOpenTelemetry(logging =>
 {
@@ -76,6 +85,8 @@ var app = builder.Build();
 // ---------------------------------------------------------------------------
 // Endpoints
 // ---------------------------------------------------------------------------
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>

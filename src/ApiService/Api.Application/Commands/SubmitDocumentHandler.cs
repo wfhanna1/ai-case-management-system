@@ -3,6 +3,7 @@ using Api.Domain.Aggregates;
 using Api.Domain.Ports;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
+using SharedKernel.Diagnostics;
 
 namespace Api.Application.Commands;
 
@@ -12,17 +13,20 @@ public sealed class SubmitDocumentHandler
     private readonly IFileStoragePort _fileStorage;
     private readonly IMessageBusPort _messageBus;
     private readonly ILogger<SubmitDocumentHandler> _logger;
+    private readonly AppMetrics? _metrics;
 
     public SubmitDocumentHandler(
         IDocumentRepository repository,
         IFileStoragePort fileStorage,
         IMessageBusPort messageBus,
-        ILogger<SubmitDocumentHandler> logger)
+        ILogger<SubmitDocumentHandler> logger,
+        AppMetrics? metrics = null)
     {
         _repository = repository;
         _fileStorage = fileStorage;
         _messageBus = messageBus;
         _logger = logger;
+        _metrics = metrics;
     }
 
     public async Task<Result<DocumentDto>> HandleAsync(
@@ -56,6 +60,8 @@ public sealed class SubmitDocumentHandler
                 "Failed to publish DocumentUploadedEvent for document {DocumentId}: {Error}. Document saved successfully; event will need retry.",
                 document.Id.Value, publishResult.Error.Message);
         }
+
+        _metrics?.DocumentsSubmitted.Add(1);
 
         return Result<DocumentDto>.Success(new DocumentDto(
             document.Id.Value,

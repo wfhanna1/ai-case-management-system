@@ -14,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using FluentValidation;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using SharedKernel;
 using SharedKernel.Diagnostics;
@@ -24,7 +25,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Observability -- OpenTelemetry distributed tracing + structured logging
 // ---------------------------------------------------------------------------
 var serviceDiagnostics = new ServiceDiagnostics("ApiService");
+var appMetrics = new AppMetrics(serviceDiagnostics.ServiceName);
 builder.Services.AddSingleton(serviceDiagnostics);
+builder.Services.AddSingleton(appMetrics);
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing
@@ -32,7 +35,13 @@ builder.Services.AddOpenTelemetry()
         .AddSource("MassTransit")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddOtlpExporter());
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddMeter("MassTransit")
+        .AddMeter(serviceDiagnostics.ServiceName)
+        .AddPrometheusExporter());
 
 builder.Logging.AddOpenTelemetry(logging =>
 {
@@ -263,7 +272,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 app.MapControllers();
-
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
