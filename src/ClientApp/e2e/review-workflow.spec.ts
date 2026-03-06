@@ -30,6 +30,15 @@ test.describe('Review workflow', () => {
     });
 
     test('empty queue shows empty message', async ({ page }) => {
+      // Mock the review queue API to return empty results
+      await page.route(/\/api\/reviews\/pending/, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [], error: null }),
+        })
+      );
+
       await page.goto('/reviews');
       await expect(page.getByText('No documents pending review')).toBeVisible();
     });
