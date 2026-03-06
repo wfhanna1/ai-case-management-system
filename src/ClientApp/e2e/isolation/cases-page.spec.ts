@@ -33,7 +33,7 @@ workerTest.describe('CasesPage', () => {
   });
 
   workerTest('shows error alert on API failure', async ({ workerPage: page }) => {
-    await page.route('**/api/cases', route =>
+    await page.route(/\/api\/cases(\?.*)?$/, route =>
       route.fulfill({
         status: 500,
         contentType: 'application/json',
