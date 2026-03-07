@@ -1,0 +1,207 @@
+asyncapi: "2.6.0"
+info:
+  title: Case Management Messaging API
+  version: "1.0.0"
+  description: >
+    AsyncAPI spec for the Case Management system's inter-service messaging.
+    Three microservices (ApiService, OcrWorkerService, RagService) communicate
+    via RabbitMQ using MassTransit with JSON serialization (camelCase).
+
+servers:
+  rabbitmq:
+    url: localhost:5672
+    protocol: amqp
+
+channels:
+  ocrworker-document-uploaded:
+    description: >
+      OcrWorkerService subscribes to DocumentUploadedEvent to begin OCR processing
+      on newly uploaded intake documents.
+    subscribe:
+      operationId: onDocumentUploaded
+      summary: Receive a document-uploaded event
+      message:
+        $ref: "#/components/messages/DocumentUploadedEvent"
+      bindings:
+        amqp:
+          ack: true
+
+  apiservice-document-processed:
+    description: >
+      ApiService subscribes to DocumentProcessedEvent to update the document
+      with OCR-extracted fields after processing completes.
+    subscribe:
+      operationId: onDocumentProcessed
+      summary: Receive a document-processed event
+      message:
+        $ref: "#/components/messages/DocumentProcessedEvent"
+      bindings:
+        amqp:
+          ack: true
+
+  ragservice-embedding-requested:
+    description: >
+      RagService subscribes to EmbeddingRequestedEvent to generate vector
+      embeddings from extracted document text and field values.
+    subscribe:
+      operationId: onEmbeddingRequested
+      summary: Receive an embedding-requested event
+      message:
+        $ref: "#/components/messages/EmbeddingRequestedEvent"
+      bindings:
+        amqp:
+          ack: true
+
+  apiservice-embedding-completed:
+    description: >
+      Channel for EmbeddingCompletedEvent. No consumer is wired yet; defined
+      for future use.
+    subscribe:
+      operationId: onEmbeddingCompleted
+      summary: Receive an embedding-completed event
+      message:
+        $ref: "#/components/messages/EmbeddingCompletedEvent"
+      bindings:
+        amqp:
+          ack: true
+
+components:
+  messages:
+    DocumentUploadedEvent:
+      name: DocumentUploadedEvent
+      title: Document Uploaded
+      summary: Published by ApiService when a new intake document has been stored.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/DocumentUploadedEvent"
+
+    DocumentProcessedEvent:
+      name: DocumentProcessedEvent
+      title: Document Processed
+      summary: Published by OcrWorkerService when OCR extraction is complete.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/DocumentProcessedEvent"
+
+    EmbeddingRequestedEvent:
+      name: EmbeddingRequestedEvent
+      title: Embedding Requested
+      summary: Published by ApiService to request vector embedding of extracted text.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/EmbeddingRequestedEvent"
+
+    EmbeddingCompletedEvent:
+      name: EmbeddingCompletedEvent
+      title: Embedding Completed
+      summary: Published by RagService when vector embeddings have been stored.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/EmbeddingCompletedEvent"
+
+  schemas:
+    DocumentUploadedEvent:
+      type: object
+      required:
+        - documentId
+        - tenantId
+        - fileName
+        - storageKey
+        - uploadedAt
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        tenantId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        storageKey:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+
+    DocumentProcessedEvent:
+      type: object
+      required:
+        - documentId
+        - tenantId
+        - extractedFields
+        - processedAt
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        extractedFields:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ExtractedFieldResult"
+        processedAt:
+          type: string
+          format: date-time
+
+    EmbeddingRequestedEvent:
+      type: object
+      required:
+        - documentId
+        - tenantId
+        - textContent
+        - fieldValues
+        - requestedAt
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        textContent:
+          type: string
+        fieldValues:
+          type: object
+          additionalProperties:
+            type: string
+        requestedAt:
+          type: string
+          format: date-time
+
+    EmbeddingCompletedEvent:
+      type: object
+      required:
+        - documentId
+        - tenantId
+        - completedAt
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        completedAt:
+          type: string
+          format: date-time
+
+    ExtractedFieldResult:
+      type: object
+      required:
+        - fieldName
+        - value
+        - confidence
+      properties:
+        fieldName:
+          type: string
+        value:
+          type: string
+        confidence:
+          type: number
+          format: double
