@@ -147,5 +147,25 @@ public sealed class DocumentProcessedConsumer : IConsumer<DocumentProcessedEvent
         _logger.LogInformation(
             "Document marked as PendingReview with {FieldCount} extracted fields. DocumentId={DocumentId}",
             extractedFields.Count, message.DocumentId);
+
+        // Publish embedding request so RagService can generate vector embeddings for similarity search.
+        if (extractedFields.Count > 0)
+        {
+            var textContent = string.Join("\n", extractedFields.Select(f => $"{f.Name}: {f.Value}"));
+            var fieldValues = extractedFields.ToDictionary(f => f.Name, f => f.Value);
+
+            var embeddingEvent = new EmbeddingRequestedEvent(
+                DocumentId: message.DocumentId,
+                TenantId: message.TenantId,
+                TextContent: textContent,
+                FieldValues: fieldValues,
+                RequestedAt: DateTimeOffset.UtcNow);
+
+            await context.Publish(embeddingEvent, context.CancellationToken);
+
+            _logger.LogInformation(
+                "Published EmbeddingRequestedEvent for DocumentId={DocumentId}",
+                message.DocumentId);
+        }
     }
 }
