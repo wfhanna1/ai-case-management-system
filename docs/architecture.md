@@ -559,7 +559,7 @@ The project implements a full testing pyramid. Each layer runs faster and covers
          /  E2E (Playwright)  \          50 tests -- real browser, real backend
         / Isolation (Playwright) \      100 tests -- real browser, mocked API
        /   Integration (.NET)     \      39 tests -- real DB (SQLite), real DI
-      /     Unit (.NET + Vitest)    \  ~500 tests -- pure logic, no I/O
+      /     Unit (.NET + Vitest)    \  ~506 tests -- pure logic, no I/O
 ```
 
 **Why this matters for refactoring.** The bottom of the pyramid (unit tests) pins down every domain invariant, handler behavior, and validation rule. Changing an aggregate's state machine or a handler's logic immediately breaks a targeted test that explains what went wrong. The middle layer (integration + isolation) confirms that adapters, repositories, and UI components still wire together correctly after a refactor. The top layer (E2E) validates that complete user workflows survive end-to-end. A developer can restructure internal code with confidence because all three layers must stay green before merging.
@@ -577,7 +577,7 @@ The project implements a full testing pyramid. Each layer runs faster and covers
 | `OcrWorker.Tests` | Unit | 19 | `ProcessDocumentHandler`, `MockOcrAdapter`, `TesseractOcrAdapter`, `LocalFileStorageReadAdapter`, consumer log scopes |
 | `RagService.Tests` | Unit + Integration | 29 | `EmbedDocumentHandler`, `SimilarDocumentsHandler`, `FindSimilarByTextHandler`, `MockEmbeddingAdapter`, `EmbeddingRequestedConsumer`, `RagDataSeeder`, OpenAPI contract drift tests, topK default validation |
 
-**Total backend tests**: ~491 across 8 test projects.
+**Total backend tests**: ~506 across 8 test projects.
 
 ### Frontend Tests (Vitest)
 
