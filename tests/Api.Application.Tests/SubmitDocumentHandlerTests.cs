@@ -127,7 +127,7 @@ public sealed class SubmitDocumentHandlerTests
         public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusAsync(TenantId tenantId, DocumentStatus status, int page, int pageSize, CancellationToken ct = default)
             => throw new NotImplementedException();
 
-        public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
+        public Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Result<Unit>> UpdateAsync(IntakeDocument document, CancellationToken ct = default)

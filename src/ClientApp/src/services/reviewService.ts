@@ -37,12 +37,21 @@ interface ApiResponse<T> {
   };
 }
 
-export async function getPendingReviews(): Promise<ReviewDocumentDto[]> {
-  const res = await api.get<ApiResponse<ReviewDocumentDto[]>>('/reviews/pending');
+export interface PendingReviewResult {
+  items: ReviewDocumentDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function getPendingReviews(page = 1, pageSize = 20): Promise<PendingReviewResult> {
+  const res = await api.get<ApiResponse<PendingReviewResult>>('/reviews/pending', {
+    params: { page, pageSize },
+  });
   if (res.data.error) {
     throw new Error(res.data.error.message);
   }
-  return res.data.data ?? [];
+  return res.data.data ?? { items: [], totalCount: 0, page, pageSize };
 }
 
 export async function getReview(documentId: string): Promise<ReviewDocumentDto> {

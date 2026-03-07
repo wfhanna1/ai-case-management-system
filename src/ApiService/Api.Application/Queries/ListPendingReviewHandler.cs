@@ -15,7 +15,7 @@ public sealed class ListPendingReviewHandler
         _repository = repository;
     }
 
-    public async Task<Result<IReadOnlyList<ReviewDocumentDto>>> HandleAsync(
+    public async Task<Result<PendingReviewResultDto>> HandleAsync(
         Guid tenantId,
         int page,
         int pageSize,
@@ -26,12 +26,13 @@ public sealed class ListPendingReviewHandler
         var statuses = new[] { DocumentStatus.PendingReview, DocumentStatus.InReview };
         var result = await _repository.ListByStatusesAsync(tid, statuses, page, pageSize, ct);
         if (result.IsFailure)
-            return Result<IReadOnlyList<ReviewDocumentDto>>.Failure(result.Error);
+            return Result<PendingReviewResultDto>.Failure(result.Error);
 
-        var dtos = result.Value
+        var dtos = result.Value.Items
             .Select(ReviewMappings.ToDto)
             .ToList();
 
-        return Result<IReadOnlyList<ReviewDocumentDto>>.Success(dtos);
+        return Result<PendingReviewResultDto>.Success(
+            new PendingReviewResultDto(dtos, result.Value.TotalCount, page, pageSize));
     }
 }

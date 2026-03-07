@@ -51,8 +51,8 @@ export async function mockUploadDocumentError(page: Page, code: string, message:
 
 // Reviews
 export async function mockGetReviewQueue(page: Page, docs: ReviewDocumentDto[]) {
-  await page.route('**/api/reviews/pending', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(docs)) })
+  await page.route(/\/api\/reviews\/pending(\?|$)/, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: docs, totalCount: docs.length, page: 1, pageSize: 20 })) })
   );
 }
 

@@ -90,23 +90,28 @@ public sealed class EfDocumentRepository : IDocumentRepository
         }
     }
 
-    public async Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusesAsync(
+    public async Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> ListByStatusesAsync(
         TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
     {
         try
         {
-            var documents = await _db.Documents
-                .Where(d => d.TenantId == tenantId && statuses.Contains(d.Status))
+            var query = _db.Documents
+                .Where(d => d.TenantId == tenantId && statuses.Contains(d.Status));
+
+            var totalCount = await query.CountAsync(ct);
+
+            var documents = await query
                 .OrderByDescending(d => d.ProcessedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
-            return Result<IReadOnlyList<IntakeDocument>>.Success(documents);
+
+            return Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Success((documents, totalCount));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to list documents by statuses for tenant {TenantId}", tenantId.Value);
-            return Result<IReadOnlyList<IntakeDocument>>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+            return Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Failure(new Error("DB_ERROR", "An internal error occurred"));
         }
     }
 

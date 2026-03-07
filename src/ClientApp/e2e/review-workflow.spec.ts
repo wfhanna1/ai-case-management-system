@@ -35,7 +35,7 @@ test.describe('Review workflow', () => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ data: [], error: null }),
+          body: JSON.stringify({ data: { items: [], totalCount: 0, page: 1, pageSize: 20 }, error: null }),
         })
       );
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
@@ -9,6 +10,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import Chip from '@mui/material/Chip';
 import Badge from '@mui/material/Badge';
 import Button from '@mui/material/Button';
@@ -30,13 +32,17 @@ const STATUS_COLORS: Record<string, 'info' | 'warning' | 'success' | 'error' | '
 
 function ReviewQueuePage() {
   const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['pendingReviews'],
-    queryFn: getPendingReviews,
+    queryKey: ['pendingReviews', page, pageSize],
+    queryFn: () => getPendingReviews(page + 1, pageSize),
     refetchInterval: 5000,
   });
 
-  const pendingCount = data?.length ?? 0;
+  const pendingCount = data?.totalCount ?? 0;
+  const items = data?.items ?? [];
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -74,8 +80,8 @@ function ReviewQueuePage() {
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : data && data.length > 0 ? (
-                data.map((doc: ReviewDocumentDto) => (
+              ) : items.length > 0 ? (
+                items.map((doc: ReviewDocumentDto) => (
                   <TableRow key={doc.id} hover>
                     <TableCell>{doc.originalFileName}</TableCell>
                     <TableCell>
@@ -109,6 +115,20 @@ function ReviewQueuePage() {
             </TableBody>
           </Table>
         </TableContainer>
+        {pendingCount > 0 && (
+          <TablePagination
+            component="div"
+            count={pendingCount}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={pageSize}
+            onRowsPerPageChange={e => {
+              setPageSize(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            data-testid="reviews-pagination"
+          />
+        )}
       </Paper>
     </Box>
   );

@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { reviewerTest } from '../fixtures/auth.fixture';
-import { createReviewDocumentDto } from '../fixtures/mock-data';
+import { createReviewDocumentDto, apiOk } from '../fixtures/mock-data';
 import { mockGetReviewQueue, mockApiError } from '../helpers/api-mocks';
 
 reviewerTest.describe('Review queue page (isolation)', () => {
@@ -48,10 +48,35 @@ reviewerTest.describe('Review queue page (isolation)', () => {
   });
 
   reviewerTest('handles API error', async ({ reviewerPage }) => {
-    await mockApiError(reviewerPage, '**/api/reviews/pending', 'SERVER_ERROR', 'Connection failed');
+    await mockApiError(reviewerPage, '**/api/reviews/pending**', 'SERVER_ERROR', 'Connection failed');
     await reviewerPage.goto('/reviews');
 
     await expect(reviewerPage.getByRole('alert')).toBeVisible();
+  });
+
+  reviewerTest('shows pagination when totalCount exceeds page size', async ({ reviewerPage }) => {
+    const docs = Array.from({ length: 5 }, (_, i) =>
+      createReviewDocumentDto({ originalFileName: `form-${i + 1}.pdf`, status: 'PendingReview' })
+    );
+    // Mock page 1 of 25 total items (5 per page)
+    await reviewerPage.route('**/api/reviews/pending**', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(apiOk({ items: docs, totalCount: 25, page: 1, pageSize: 5 })),
+      })
+    );
+    await reviewerPage.goto('/reviews');
+
+    const pagination = reviewerPage.getByTestId('reviews-pagination');
+    await expect(pagination).toBeVisible();
+  });
+
+  reviewerTest('hides pagination when queue is empty', async ({ reviewerPage }) => {
+    await mockGetReviewQueue(reviewerPage, []);
+    await reviewerPage.goto('/reviews');
+
+    await expect(reviewerPage.getByTestId('reviews-pagination')).not.toBeVisible();
   });
 
   reviewerTest('review button navigates to detail page', async ({ reviewerPage }) => {
