@@ -4,15 +4,40 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 
 ---
 
+## Requirements Coverage
+
+| # | Requirement | Status | Notes |
+|---|------------|--------|-------|
+| 1 | Secure Login | Complete | JWT + refresh token rotation, 3 roles (Admin, IntakeWorker, Reviewer) |
+| 2 | Form Templates | Complete | 4 templates, 6 field types, view/download/print |
+| 3 | Upload and Processing | Complete | Real OCR (Tesseract in Docker), regex field extraction, confidence scoring |
+| 4 | Review and Human-in-the-Loop | Complete | Role-gated workflow, inline corrections, color-coded confidence, audit trail |
+| 5 | Search and Case View | Complete | Name/date/template search, case aggregation by subject |
+| 6 | RAG + Vector DB | Complete | Qdrant integrated, tenant-isolated, similar cases surfaced in review UI; real semantic embeddings via SmartComponents bge-micro-v2 |
+| 7 | Multi-Tenancy | Complete | Row-level isolation, JWT propagation, vector store filtering, message bus verification |
+| 8 | Observability and Resilience | Complete | Grafana/Prometheus/Loki/Tempo, OpenTelemetry tracing as correlation IDs, health checks, MassTransit retry policies |
+| 9 | Tests | Complete | 516 backend + 102 isolation + 53 E2E tests |
+| 10 | Deliverables | Complete | Docker Compose, OpenAPI/AsyncAPI specs, architecture doc, README, self-assessment |
+
+---
+
 ## Completed Features
 
 ### Core Pipeline
 - **Document upload** with local file storage, template association, and automatic status tracking
 - **OCR processing** via Tesseract (real OCR in Docker, mock adapter for tests), with PDF-to-image conversion using Docnet
-- **Field extraction** using regex key-value pattern matching on OCR output text
+- **Field extraction** using regex key-value pattern matching on OCR output text, with **confidence scoring** per field (0.0 to 1.0)
 - **Review workflow** with role-based access: start review, correct extracted fields, finalize with full audit trail
 - **Case assignment** that auto-groups documents by subject name, with priority resolution (Subject > Client > any Name field)
-- **Vector embeddings** stored in Qdrant with tenant-isolated similarity search using real semantic embeddings (SmartComponents bge-micro-v2 model)
+
+### RAG and Similar Case Context
+- **Real semantic embeddings** via SmartComponents `bge-micro-v2` model (384-dimensional, CPU-only, ~23MB ONNX model running inside the RagService process with no external dependencies). Configurable via `Embedding:Provider` (default: `local`, fallback: `mock` for tests)
+- **Embedding strategy:** each document is embedded as a single vector built from concatenated extracted field name-value pairs (corrected values take precedence over originals when available)
+- **No chunking:** one embedding per document, which is sufficient for single-page intake forms but would need chunking for longer documents
+- **Similar cases surfaced during review:** when a reviewer opens a document, the system generates an embedding on the fly from the document's extracted fields, queries Qdrant for the top 5 most similar documents (excluding itself), and presents them in the review UI
+- **UI presentation:** an accordion panel shows each similar case with a percentage-based similarity score (color-coded: green above 90%, yellow above 70%, red below), a generated summary, and expandable field details pulled from the vector store metadata
+- **Tenant isolation in vectors:** a single Qdrant collection with payload filtering on `tenant_id`, so each tenant's similarity searches only return their own cases
+- **Summary generation:** `ISummaryPort` is called for each similar case result; currently uses a template-based adapter (not an LLM), which produces structured but not narrative summaries
 
 ### Architecture
 - **Three microservices** (API, OCR Worker, RAG Service) communicating via RabbitMQ/MassTransit
@@ -40,10 +65,11 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 - **Per-field inline validation** with server-side FluentValidation returning field-level error details
 - **Dashboard** with live stats (pending reviews, processed today, avg processing time) and recent activity feed
 - **Document preview** for images and PDFs, template printing, search, case detail views
+- **Confidence display in review:** extracted fields table shows per-field confidence as color-coded chips (green >90%, yellow 70-90%, red <70%), letting reviewers quickly identify fields that need attention
 
 ### Observability
 - **Grafana + Prometheus + Loki + Tempo** stack running in Docker
-- **OpenTelemetry tracing** across all three services with Tempo as the backend
+- **OpenTelemetry tracing** across all three services with Tempo as the backend; trace IDs serve as **correlation IDs** and are included in structured log scopes (`TraceId`, `TenantId`, `DocumentId`) on every consumer and middleware, enabling cross-service request tracing through Loki and Tempo
 - **Structured logging** via the Loki Docker log driver
 - **Prometheus metrics** endpoints on all services
 - **Health checks** on every service, used by Docker Compose for dependency ordering
@@ -115,7 +141,7 @@ Migrations run automatically when the API starts. This is convenient for develop
 
 ## Development Approach and AI Tool Usage
 
-All development was done using **Claude Code** (Anthropic's CLI agent, powered by Claude Opus 4.6).
+All development was done using **Claude Code** (Anthropic's CLI agent, powered by Claude Opus 4.6), extended with custom skill plugins and agentic workflows described below.
 
 ### Planning and backlog creation
 
@@ -145,7 +171,7 @@ This phased approach provided a balance between moving quickly and maintaining c
 
 ### How AI was used throughout
 
-**Architecture and design.** I described the high-level requirements (microservices, hexagonal architecture, DDD, multi-tenancy) and Claude translated those into concrete code structures, project layouts, and dependency injection configurations.
+**Architecture and design.** I made the key architectural decisions: microservices over monolith, hexagonal architecture, DDD with aggregates, row-level multi-tenancy, Result\<T\> over exceptions. Claude translated those decisions into concrete code structures, project layouts, and dependency injection configurations. When Claude proposed alternatives (for example, using MediatR for command dispatch), I evaluated and either accepted or redirected based on the project's goals.
 
 **Test-driven development.** Claude followed strict TDD, writing failing tests first, verifying they fail for the right reason, then writing minimal code to make them pass. The TDD skill plugin enforced this discipline throughout.
 
@@ -154,6 +180,14 @@ This phased approach provided a balance between moving quickly and maintaining c
 **Debugging.** When tests failed or Docker services would not start, I described the symptoms and Claude traced through the code to identify root causes. Examples include tracing a Playwright test failure through the axios interceptor chain to find a missing API mock, and identifying a unique constraint violation in seed data caused by random name collisions.
 
 **Refactoring.** Claude performed architectural refactoring (for example, extracting business logic from Infrastructure consumers into Application handlers, moving state-transition logic from Application into Domain aggregates) while keeping all tests green.
+
+**Agentic workflows and custom plugins.** Beyond using Claude Code as a single agent, I built and used two custom plugins to accelerate development:
+
+- **Ralph Loop** (`/ralph-loop`): a recurring loop that runs a prompt or slash command on a configurable interval within the same session. This was used to continuously monitor test results, re-run builds, and catch regressions during active development without manual re-invocation.
+
+- **Enterprise Agent Team** (`/enterprise-agent-team`): a custom multi-agent plugin that spawns specialized subagents (backend engineer, frontend engineer, QA engineer, platform engineer, security reviewer, code reviewer, tech lead) to work on tasks in parallel. Each agent operates with scoped tool access and domain focus. For example, the backend engineer and frontend engineer could implement both sides of a new feature simultaneously, while the QA engineer wrote tests in parallel. A tech lead agent coordinated cross-cutting concerns.
+
+These plugins, combined with the TDD skill and the accumulated test suite as a safety net, allowed later phases to move significantly faster. The trade-off was higher token consumption: parallel agents and recurring loops burn through context quickly, and the Enterprise Agent Team in particular consumed substantially more tokens per phase than single-agent development. The parallelization was worth it for throughput, but it required careful prompt design to avoid agents duplicating or conflicting with each other's work.
 
 **Documentation.** README, architecture.md, handover.md, and this self-assessment were all written by Claude based on the actual codebase state.
 
@@ -167,17 +201,23 @@ This phased approach provided a balance between moving quickly and maintaining c
 - "Refactor FinalizeReviewHandler to use a domain method for the PendingReview-to-InReview auto-transition instead of doing the state check in the application layer"
 - "Add 200+ seed data cases with realistic field values"
 - "Run the full test suite and fix any failures"
+- "/ralph-loop 5m dotnet test" (recurring test monitoring during active development)
+- "/enterprise-agent-team" followed by delegating backend, frontend, and QA work to parallel agents
 
 ### What worked well
 - TDD enforcement caught bugs early and made refactoring safe
 - The port/adapter pattern made it easy to swap between mock and real implementations
 - Playwright isolation tests provided high-confidence UI testing without needing the full stack
 - Claude's ability to trace through multi-layer failures (for example, a missing API mock causing a 401 causing auth clear causing a redirect) was effective
+- The Enterprise Agent Team plugin allowed parallelizing independent frontend and backend work within a single phase, reducing wall-clock time for later phases
+- Ralph Loop provided continuous feedback during development without manual re-invocation
 
 ### What was challenging
 - Context window limits required session continuations, which sometimes lost context about in-progress work
 - Complex Docker Compose interactions (health checks, volume mounts, service dependencies) required trial and error
 - Playwright E2E tests are flaky when the Docker stack is not fully healthy, requiring retries
+- Parallel agent workflows consumed significantly more tokens than single-agent development, requiring awareness of cost-to-throughput trade-offs
+- Agents occasionally duplicated work or made conflicting changes when task boundaries were not clearly defined in the prompt
 
 ---
 
@@ -187,7 +227,7 @@ This phased approach provided a balance between moving quickly and maintaining c
 
 1. **Start with a monolith, extract services later.** The microservice boundaries are correct, but building three services from day one added complexity to development and testing that was not needed early on. A modular monolith with clear bounded contexts could have been split later when scaling requirements became clear.
 
-2. **Use a real embedding model from the start.** The mock embedding adapter means similarity search results are meaningless. Starting with even a small local model (e.g., all-MiniLM-L6-v2) would have made the RAG feature demonstrably useful rather than architecturally correct but functionally fake.
+2. **Use a real embedding model from the start.** The mock embedding adapter was in place for most of development, meaning similarity search results were meaningless until the local model was added late. Starting with the real model earlier would have allowed validating RAG quality throughout development rather than only at the end.
 
 3. **Add database migration tooling early.** EF Core auto-migration is fine for development, but having a proper migration pipeline (e.g., FluentMigrator or a CI step) from the start would prevent the "works on my machine" problem.
 
@@ -197,29 +237,6 @@ This phased approach provided a balance between moving quickly and maintaining c
 
 ---
 
-## README and Architecture Review
+## Documentation Review
 
-### README.md
-Reviewed and confirmed accurate as of the current codebase state. Key facts verified:
-- Docker prerequisites, quick start steps, and Loki driver installation are correct
-- Service URLs and port mappings match docker-compose.yml
-- Demo credentials match DevelopmentDbSeeder
-- Seed data counts (6 users, 8 templates, 216 cases, 400+ documents) match the seeder implementation
-- Test commands and counts are accurate (506 .NET tests, isolation and E2E commands)
-- Project structure matches the actual directory layout
-- CI description matches the GitHub Actions workflow
-
-### architecture.md
-Reviewed and confirmed accurate as of the current codebase state. Key facts verified:
-- System architecture diagram correctly shows all services and their connections
-- UML component diagram reflects actual class names and relationships
-- Document processing flow matches the real message flow through RabbitMQ
-- Hexagonal architecture description matches the actual layer structure
-- State machine transitions match IntakeDocument aggregate methods
-- Multi-tenancy implementation details (global query filters, tenant resolution middleware, vector store isolation) are accurate
-- Messaging topology (queue names, retry policy, message contracts) matches MassTransit configuration
-- Real vs mocked services table accurately reflects current adapter implementations
-- Testing pyramid counts are accurate (506 backend, 100 isolation, 50 E2E)
-- Architecture decision rationales accurately describe the actual design choices
-
-One minor note: the architecture.md references "~491" backend tests in the testing pyramid text but the actual count is 506. The table below it says "~491 across 8 test projects" and should be updated to 506. Fixing this now.
+README.md and architecture.md have been reviewed and confirmed accurate against the current codebase state, including service URLs, demo credentials, seed data counts, test counts, diagrams, and architecture decision rationales.
