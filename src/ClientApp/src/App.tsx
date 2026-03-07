@@ -63,6 +63,14 @@ function App() {
           }
         />
         <Route
+          path="/documents/:id"
+          element={
+            <ProtectedRoute>
+              <ReviewDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/search"
           element={
             <ProtectedRoute>

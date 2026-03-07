@@ -50,6 +50,7 @@ function SearchPage() {
   const [fieldValue, setFieldValue] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const today = new Date().toISOString().split('T')[0];
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [searchTriggered, setSearchTriggered] = useState(false);
@@ -59,7 +60,7 @@ function SearchPage() {
     ...(status && { status }),
     ...(fieldValue && { fieldValue }),
     ...(fromDate && { from: new Date(fromDate).toISOString() }),
-    ...(toDate && { to: new Date(toDate).toISOString() }),
+    ...(toDate && { to: new Date(toDate + 'T23:59:59.999Z').toISOString() }),
     page: page + 1,
     pageSize,
   };
@@ -138,7 +139,7 @@ function SearchPage() {
               onChange={e => setFromDate(e.target.value)}
               data-testid="search-from"
               size="small"
-              slotProps={{ inputLabel: { shrink: true } }}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 2 }}>
@@ -150,7 +151,7 @@ function SearchPage() {
               onChange={e => setToDate(e.target.value)}
               data-testid="search-to"
               size="small"
-              slotProps={{ inputLabel: { shrink: true } }}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 1 }}>
