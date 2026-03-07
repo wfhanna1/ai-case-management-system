@@ -140,7 +140,7 @@ The API gateway and primary backend. Handles all REST endpoints for the frontend
 - **Audit trail**: Record and retrieve all actions taken on documents
 - **Dashboard**: Aggregate statistics (pending review count, processed today, average processing time)
 
-The API publishes `DocumentUploadedEvent` after storing an uploaded file. It consumes `DocumentProcessedEvent` to update document status after OCR completes. The port interface `IMessageBusPort.PublishEmbeddingRequestedAsync` is defined and implemented but not yet called -- embedding requests are not automatically triggered after document processing in the current codebase.
+The API publishes `DocumentUploadedEvent` after storing an uploaded file. It consumes `DocumentProcessedEvent` to update document status after OCR completes and publishes `EmbeddingRequestedEvent` directly via MassTransit's `ConsumeContext` so the RagService can generate vector embeddings for similarity search.
 
 ### OcrWorkerService
 

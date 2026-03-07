@@ -159,9 +159,5 @@ public sealed class SubmitDocumentHandlerTests
             return Task.FromResult(PublishResult);
         }
 
-        public Task<Result<Unit>> PublishEmbeddingRequestedAsync(
-            DocumentId documentId, TenantId tenantId, string textContent,
-            Dictionary<string, string> fieldValues, CancellationToken ct = default)
-            => throw new NotImplementedException();
     }
 }

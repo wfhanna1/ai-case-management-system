@@ -48,30 +48,4 @@ public sealed class MassTransitMessageBusAdapter : IMessageBusPort
         }
     }
 
-    public async Task<Result<Unit>> PublishEmbeddingRequestedAsync(
-        DocumentId documentId,
-        TenantId tenantId,
-        string textContent,
-        Dictionary<string, string> fieldValues,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var message = new EmbeddingRequestedEvent(
-                DocumentId: documentId.Value,
-                TenantId: tenantId.Value,
-                TextContent: textContent,
-                FieldValues: fieldValues,
-                RequestedAt: DateTimeOffset.UtcNow);
-
-            await _publishEndpoint.Publish(message, ct);
-            return Result<Unit>.Success(Unit.Value);
-        }
-        catch (Exception ex)
-        {
-            return Result<Unit>.Failure(new Error(
-                "PUBLISH_FAILED",
-                $"Failed to publish EmbeddingRequestedEvent for document {documentId}: {ex.Message}"));
-        }
-    }
 }
