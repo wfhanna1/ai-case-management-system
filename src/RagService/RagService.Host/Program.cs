@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Qdrant.Client;
@@ -36,11 +35,7 @@ builder.Services.AddOpenTelemetry()
         .AddMeter(serviceDiagnostics.ServiceName)
         .AddPrometheusExporter());
 
-builder.Logging.AddOpenTelemetry(logging =>
-{
-    logging.IncludeScopes = true;
-    logging.IncludeFormattedMessage = true;
-});
+builder.Logging.AddStructuredConsoleLogging();
 
 // ---------------------------------------------------------------------------
 // Health checks

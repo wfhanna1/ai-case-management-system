@@ -33,7 +33,11 @@ cp .env.example .env   # Required before first run; set passwords
 docker compose up --build
 ```
 
-Services: API (:5000), Frontend (:3000), PostgreSQL (:5432), RabbitMQ (:5672/:15672), Qdrant (:6333/:6334).
+Services: API (:5000), Frontend (:3000), PostgreSQL (:5432), RabbitMQ (:5672/:15672), Qdrant (:6333/:6334), Grafana (:3001), Prometheus (:9090), Loki (:3100), Tempo (:3200).
+
+**Loki logging driver (first time):** `docker plugin install grafana/loki-docker-driver:3.4.3 --alias loki --grant-all-permissions`
+
+**Linux users:** Set `LOKI_DRIVER_URL=http://localhost:3100/loki/api/v1/push` in `.env` (the default `host.docker.internal` only resolves on Docker Desktop for macOS/Windows).
 
 ### Demo Credentials
 

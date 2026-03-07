@@ -63,6 +63,7 @@ Generated\ Files/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
+**/test-results/
 [Bb]uild[Ll]og.*
 *.trx
 
@@ -431,3 +432,6 @@ FodyWeavers.xsd
 node_modules/
 dist/
 .env.local
+
+# Git worktrees
+.worktrees/

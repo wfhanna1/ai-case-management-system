@@ -13,7 +13,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using FluentValidation;
 using Microsoft.OpenApi.Models;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using SharedKernel;
@@ -43,11 +42,7 @@ builder.Services.AddOpenTelemetry()
         .AddMeter(serviceDiagnostics.ServiceName)
         .AddPrometheusExporter());
 
-builder.Logging.AddOpenTelemetry(logging =>
-{
-    logging.IncludeScopes = true;
-    logging.IncludeFormattedMessage = true;
-});
+builder.Logging.AddStructuredConsoleLogging();
 
 // ---------------------------------------------------------------------------
 // Configuration -- all from environment/config, never hardcoded (12-factor)
