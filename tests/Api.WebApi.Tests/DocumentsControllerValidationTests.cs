@@ -22,6 +22,7 @@ public sealed class DocumentsControllerValidationTests
             new GetDocumentByIdHandler(null!),
             new ListDocumentsByTenantHandler(null!),
             new SearchDocumentsHandler(null!),
+            new GetDashboardStatsHandler(null!, null!),
             tenantContext);
     }
 

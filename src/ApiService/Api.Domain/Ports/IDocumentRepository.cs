@@ -28,4 +28,7 @@ public interface IDocumentRepository
         TenantId tenantId, string? fileNameContains, DocumentStatus? status,
         DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore,
         string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default);
+
+    Task<Result<(int PendingReview, int ProcessedToday, TimeSpan AverageProcessingTime)>> GetStatsAsync(
+        TenantId tenantId, CancellationToken ct = default);
 }

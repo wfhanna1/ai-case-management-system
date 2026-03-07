@@ -124,6 +124,22 @@ public sealed class EfCaseRepository : ICaseRepository
     private static string EscapeLikePattern(string input) =>
         input.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
+    public async Task<Result<int>> CountByTenantAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var count = await _db.Cases
+                .Where(c => c.TenantId == tenantId)
+                .CountAsync(ct);
+            return Result<int>.Success(count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to count cases for tenant {TenantId}", tenantId.Value);
+            return Result<int>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
     public async Task<Result<Unit>> SaveAsync(Case @case, CancellationToken ct = default)
     {
         try

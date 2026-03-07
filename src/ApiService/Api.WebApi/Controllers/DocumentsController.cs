@@ -23,6 +23,7 @@ public sealed class DocumentsController : ControllerBase
     private readonly GetDocumentByIdHandler _getByIdHandler;
     private readonly ListDocumentsByTenantHandler _listHandler;
     private readonly SearchDocumentsHandler _searchHandler;
+    private readonly GetDashboardStatsHandler _statsHandler;
     private readonly ITenantContext _tenantContext;
 
     public DocumentsController(
@@ -30,12 +31,14 @@ public sealed class DocumentsController : ControllerBase
         GetDocumentByIdHandler getByIdHandler,
         ListDocumentsByTenantHandler listHandler,
         SearchDocumentsHandler searchHandler,
+        GetDashboardStatsHandler statsHandler,
         ITenantContext tenantContext)
     {
         _submitHandler = submitHandler;
         _getByIdHandler = getByIdHandler;
         _listHandler = listHandler;
         _searchHandler = searchHandler;
+        _statsHandler = statsHandler;
         _tenantContext = tenantContext;
     }
 
@@ -102,6 +105,19 @@ public sealed class DocumentsController : ControllerBase
                 result.Error.Code, "An internal error occurred"));
 
         return Ok(ApiResponse<SearchDocumentsResultDto>.Ok(result.Value));
+    }
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> Stats(CancellationToken ct)
+    {
+        var tenantId = _tenantContext.TenantId!.Value;
+        var result = await _statsHandler.HandleAsync(tenantId, ct);
+
+        if (result.IsFailure)
+            return StatusCode(500, ApiResponse<DashboardStatsDto>.Fail(
+                result.Error.Code, "An internal error occurred"));
+
+        return Ok(ApiResponse<DashboardStatsDto>.Ok(result.Value));
     }
 
     [HttpGet]

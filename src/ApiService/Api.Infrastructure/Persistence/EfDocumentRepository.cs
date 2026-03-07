@@ -199,6 +199,44 @@ public sealed class EfDocumentRepository : IDocumentRepository
     private static string EscapeLikePattern(string input) =>
         input.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
+    public async Task<Result<(int PendingReview, int ProcessedToday, TimeSpan AverageProcessingTime)>> GetStatsAsync(
+        TenantId tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var today = DateTimeOffset.UtcNow.Date;
+
+            var pendingReview = await _db.Documents
+                .Where(d => d.TenantId == tenantId && d.Status == DocumentStatus.PendingReview)
+                .CountAsync(ct);
+
+            var processedToday = await _db.Documents
+                .Where(d => d.TenantId == tenantId && d.ProcessedAt != null && d.ProcessedAt >= today)
+                .CountAsync(ct);
+
+            // Fetch only the two timestamp columns (not full entities) for the most
+            // recent 1000 processed documents to bound memory usage while still
+            // producing a representative average.
+            var processedDocs = await _db.Documents
+                .Where(d => d.TenantId == tenantId && d.ProcessedAt != null && d.SubmittedAt != default)
+                .OrderByDescending(d => d.ProcessedAt)
+                .Take(1000)
+                .Select(d => new { d.SubmittedAt, ProcessedAt = d.ProcessedAt!.Value })
+                .ToListAsync(ct);
+
+            var avgTime = processedDocs.Count > 0
+                ? TimeSpan.FromSeconds(processedDocs.Average(d => (d.ProcessedAt - d.SubmittedAt).TotalSeconds))
+                : TimeSpan.Zero;
+
+            return Result<(int, int, TimeSpan)>.Success((pendingReview, processedToday, avgTime));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get stats for tenant {TenantId}", tenantId.Value);
+            return Result<(int, int, TimeSpan)>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
     public async Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default)
     {
         try

@@ -126,6 +126,7 @@ public sealed class AssignDocumentToCaseHandlerTests
         public Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> SearchAsync(TenantId tenantId, string? fileNameContains, DocumentStatus? status, DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore, string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Result<(int PendingReview, int ProcessedToday, TimeSpan AverageProcessingTime)>> GetStatsAsync(TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();
     }
 
     private sealed class StubCaseRepository : ICaseRepository
@@ -154,5 +155,6 @@ public sealed class AssignDocumentToCaseHandlerTests
         public Task<Result<Case?>> FindByIdAsync(CaseId id, TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<(IReadOnlyList<Case> Items, int TotalCount)>> ListByTenantAsync(TenantId tenantId, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<(IReadOnlyList<Case> Items, int TotalCount)>> SearchAsync(TenantId tenantId, string? query, DocumentStatus? status, DateTimeOffset? from, DateTimeOffset? to, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Result<int>> CountByTenantAsync(TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }

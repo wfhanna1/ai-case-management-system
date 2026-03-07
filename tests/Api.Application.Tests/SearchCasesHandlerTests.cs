@@ -83,5 +83,6 @@ public sealed class SearchCasesHandlerTests
         public Task<Result<(IReadOnlyList<Case> Items, int TotalCount)>> ListByTenantAsync(TenantId tenantId, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> SaveAsync(Case @case, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> UpdateAsync(Case @case, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Result<int>> CountByTenantAsync(TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }

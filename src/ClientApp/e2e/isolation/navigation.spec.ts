@@ -1,8 +1,25 @@
 import { expect } from '@playwright/test';
 import { workerTest } from '../fixtures/auth.fixture';
+import { apiOk } from '../fixtures/mock-data';
+
+async function mockDashboardStats(page: import('@playwright/test').Page) {
+  await page.route('**/api/documents/stats', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(apiOk({
+        totalCases: 0,
+        pendingReview: 0,
+        processedToday: 0,
+        averageProcessingTime: '--',
+      })),
+    })
+  );
+}
 
 workerTest.describe('Navigation responsiveness', () => {
   workerTest('shows hamburger menu on small screens', async ({ workerPage: page }) => {
+    await mockDashboardStats(page);
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/dashboard');
 
@@ -10,6 +27,7 @@ workerTest.describe('Navigation responsiveness', () => {
   });
 
   workerTest('hides inline nav buttons on small screens', async ({ workerPage: page }) => {
+    await mockDashboardStats(page);
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/dashboard');
 
@@ -19,6 +37,7 @@ workerTest.describe('Navigation responsiveness', () => {
   });
 
   workerTest('hamburger menu opens drawer with nav links', async ({ workerPage: page }) => {
+    await mockDashboardStats(page);
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/dashboard');
 
@@ -30,6 +49,7 @@ workerTest.describe('Navigation responsiveness', () => {
   });
 
   workerTest('mobile drawer nav item navigates and closes drawer', async ({ workerPage: page }) => {
+    await mockDashboardStats(page);
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/dashboard');
 
@@ -41,6 +61,7 @@ workerTest.describe('Navigation responsiveness', () => {
   });
 
   workerTest('shows inline nav buttons on large screens', async ({ workerPage: page }) => {
+    await mockDashboardStats(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/dashboard');
 
