@@ -4,8 +4,13 @@ import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid2';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import Chip from '@mui/material/Chip';
 import { useQuery } from '@tanstack/react-query';
-import { getDashboardStats } from '../services/documentService';
+import { getDashboardStats, getRecentActivity } from '../services/documentService';
 
 interface StatCardProps {
   title: string;
@@ -33,6 +38,12 @@ function DashboardPage() {
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: getDashboardStats,
+    refetchInterval: 30_000,
+  });
+
+  const { data: activities, isLoading: activitiesLoading } = useQuery({
+    queryKey: ['recentActivity'],
+    queryFn: () => getRecentActivity(10),
     refetchInterval: 30_000,
   });
 
@@ -72,13 +83,42 @@ function DashboardPage() {
         </Grid>
       )}
 
-      <Paper sx={{ p: 3, mt: 3 }} elevation={1}>
+      <Paper sx={{ p: 3, mt: 3 }} elevation={1} data-testid="recent-activity">
         <Typography variant="h6" gutterBottom fontWeight={600}>
           Recent Activity
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Activity feed will appear here once cases are being processed.
-        </Typography>
+        {activitiesLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : !activities || activities.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No recent activity yet.
+          </Typography>
+        ) : (
+          <List dense disablePadding data-testid="activity-list">
+            {activities.map((a, i) => (
+              <Box key={a.id}>
+                {i > 0 && <Divider />}
+                <ListItem disableGutters>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip label={a.action} size="small" variant="outlined" />
+                        {a.fieldName && (
+                          <Typography variant="body2" color="text.secondary">
+                            {a.fieldName}
+                          </Typography>
+                        )}
+                      </Box>
+                    }
+                    secondary={new Date(a.timestamp).toLocaleString()}
+                  />
+                </ListItem>
+              </Box>
+            ))}
+          </List>
+        )}
       </Paper>
     </Box>
   );

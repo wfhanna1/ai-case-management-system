@@ -91,6 +91,27 @@ export async function getDashboardStats(): Promise<DashboardStatsDto> {
   return res.data.data;
 }
 
+export interface RecentActivityDto {
+  id: string;
+  documentId: string;
+  action: string;
+  performedBy: string | null;
+  timestamp: string;
+  fieldName: string | null;
+  previousValue: string | null;
+  newValue: string | null;
+}
+
+export async function getRecentActivity(limit = 10): Promise<RecentActivityDto[]> {
+  const res = await api.get<ApiResponse<RecentActivityDto[]>>('/documents/recent-activity', {
+    params: { limit },
+  });
+  if (res.data.error) {
+    throw new Error(res.data.error.message);
+  }
+  return res.data.data ?? [];
+}
+
 export async function searchDocuments(params: SearchDocumentsParams): Promise<SearchDocumentsResult> {
   const res = await api.get<ApiResponse<SearchDocumentsResult>>('/documents/search', { params });
   if (res.data.error) {

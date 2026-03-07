@@ -28,6 +28,7 @@ public sealed class DocumentsController : ControllerBase
     private readonly ListDocumentsByTenantHandler _listHandler;
     private readonly SearchDocumentsHandler _searchHandler;
     private readonly GetDashboardStatsHandler _statsHandler;
+    private readonly GetRecentActivitiesHandler _recentActivitiesHandler;
     private readonly ITenantContext _tenantContext;
 
     public DocumentsController(
@@ -37,6 +38,7 @@ public sealed class DocumentsController : ControllerBase
         ListDocumentsByTenantHandler listHandler,
         SearchDocumentsHandler searchHandler,
         GetDashboardStatsHandler statsHandler,
+        GetRecentActivitiesHandler recentActivitiesHandler,
         ITenantContext tenantContext)
     {
         _submitHandler = submitHandler;
@@ -45,6 +47,7 @@ public sealed class DocumentsController : ControllerBase
         _listHandler = listHandler;
         _searchHandler = searchHandler;
         _statsHandler = statsHandler;
+        _recentActivitiesHandler = recentActivitiesHandler;
         _tenantContext = tenantContext;
     }
 
@@ -219,6 +222,22 @@ public sealed class DocumentsController : ControllerBase
                 result.Error.Code, "An internal error occurred"));
 
         return Ok(ApiResponse<DashboardStatsDto>.Ok(result.Value));
+    }
+
+    [HttpGet("recent-activity")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<RecentActivityDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<RecentActivityDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RecentActivity([FromQuery] int limit = 10, CancellationToken ct = default)
+    {
+        var tenantId = _tenantContext.TenantId!.Value;
+        var result = await _recentActivitiesHandler.HandleAsync(tenantId, Math.Clamp(limit, 1, 50), ct);
+
+        if (result.IsFailure)
+            return StatusCode(500, ApiResponse<IReadOnlyList<RecentActivityDto>>.Fail(
+                result.Error.Code, "An internal error occurred"));
+
+        return Ok(ApiResponse<IReadOnlyList<RecentActivityDto>>.Ok(result.Value));
     }
 
     /// <summary>

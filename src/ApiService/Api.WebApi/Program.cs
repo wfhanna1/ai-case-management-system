@@ -242,6 +242,7 @@ builder.Services.AddTransient<SearchCasesHandler>();
 builder.Services.AddTransient<AssignDocumentToCaseHandler>();
 builder.Services.AddTransient<GetSimilarCasesHandler>();
 builder.Services.AddTransient<GetDashboardStatsHandler>();
+builder.Services.AddTransient<GetRecentActivitiesHandler>();
 
 // ---------------------------------------------------------------------------
 // RAG Service client + Summary adapter

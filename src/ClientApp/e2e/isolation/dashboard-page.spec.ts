@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { workerTest } from '../fixtures/auth.fixture';
 import { apiOk } from '../fixtures/mock-data';
+import { mockGetRecentActivity } from '../helpers/api-mocks';
 
 test.describe('Dashboard page (isolation)', () => {
   test('redirects to login when not authenticated', async ({ page }) => {
@@ -9,11 +10,13 @@ test.describe('Dashboard page (isolation)', () => {
   });
 
   workerTest('renders dashboard heading for authenticated user', async ({ workerPage }) => {
+    await mockGetRecentActivity(workerPage, []);
     await workerPage.goto('/dashboard');
     await expect(workerPage.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   workerTest('shows stat cards', async ({ workerPage }) => {
+    await mockGetRecentActivity(workerPage, []);
     await workerPage.route('**/api/documents/stats', route =>
       route.fulfill({
         status: 200,

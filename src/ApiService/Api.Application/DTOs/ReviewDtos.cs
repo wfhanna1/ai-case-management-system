@@ -26,6 +26,16 @@ public sealed record AuditLogEntryDto(
     string? PreviousValue,
     string? NewValue);
 
+public sealed record RecentActivityDto(
+    Guid Id,
+    Guid DocumentId,
+    string Action,
+    Guid? PerformedBy,
+    DateTimeOffset Timestamp,
+    string? FieldName,
+    string? PreviousValue,
+    string? NewValue);
+
 public sealed record PendingReviewResultDto(
     IReadOnlyList<ReviewDocumentDto> Items,
     int TotalCount,

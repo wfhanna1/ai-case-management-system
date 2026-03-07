@@ -1,8 +1,13 @@
 import { expect } from '@playwright/test';
 import { workerTest } from '../fixtures/auth.fixture';
 import { apiOk } from '../fixtures/mock-data';
+import { mockGetRecentActivity } from '../helpers/api-mocks';
 
 workerTest.describe('Dashboard stats', () => {
+  workerTest.beforeEach(async ({ workerPage: page }) => {
+    await mockGetRecentActivity(page, []);
+  });
+
   workerTest('displays stats from API', async ({ workerPage: page }) => {
     await page.route('**/api/documents/stats', route =>
       route.fulfill({

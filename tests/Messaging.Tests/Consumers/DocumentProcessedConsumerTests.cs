@@ -314,5 +314,9 @@ public sealed class DocumentProcessedConsumerTests
             DocumentId documentId, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(Result<IReadOnlyList<AuditLogEntry>>.Success(
                 (IReadOnlyList<AuditLogEntry>)new List<AuditLogEntry>()));
+
+        public Task<Result<IReadOnlyList<AuditLogEntry>>> ListRecentByTenantAsync(
+            TenantId tenantId, int limit, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }
