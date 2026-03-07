@@ -112,6 +112,13 @@ export interface SimilarCasesResultDto {
   items: SimilarCaseDto[];
 }
 
+export async function getDocumentFileBlob(documentId: string): Promise<Blob> {
+  const res = await api.get(`/documents/${documentId}/file`, {
+    responseType: 'blob',
+  });
+  return res.data;
+}
+
 export async function getSimilarCases(documentId: string): Promise<SimilarCasesResultDto> {
   const res = await api.get<ApiResponse<SimilarCasesResultDto>>(
     `/reviews/${documentId}/similar-cases`

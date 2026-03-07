@@ -30,6 +30,9 @@ reviewerTest.describe('Review workflow', () => {
     await page.route(`**/api/reviews/${docId}/finalize`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({})) })
     );
+    await page.route(`**/api/documents/${docId}/file`, route =>
+      route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB', 'base64') })
+    );
 
     // Mock pending reviews endpoint for post-finalize navigation
     await page.route('**/api/reviews/pending**', route =>
@@ -77,6 +80,9 @@ reviewerTest.describe('Review workflow', () => {
       corrected = true;
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({})) });
     });
+    await page.route(`**/api/documents/${docId}/file`, route =>
+      route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB', 'base64') })
+    );
 
     await page.goto(`/reviews/${docId}`);
 

@@ -49,7 +49,7 @@ function App() {
         <Route
           path="/upload"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="IntakeWorker">
               <UploadPage />
             </ProtectedRoute>
           }

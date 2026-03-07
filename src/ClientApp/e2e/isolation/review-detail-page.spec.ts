@@ -226,6 +226,7 @@ reviewerTest.describe('Review detail page (isolation)', () => {
 
   reviewerTest('handles API error loading document', async ({ reviewerPage }) => {
     await mockApiError(reviewerPage, '**/api/reviews/**', 'NOT_FOUND', 'Document not found');
+    await mockApiError(reviewerPage, '**/api/documents/*/file', 'NOT_FOUND', 'File not found');
     await reviewerPage.goto('/reviews/00000000-0000-0000-0000-000000000099');
 
     await expect(reviewerPage.getByRole('alert')).toBeVisible();

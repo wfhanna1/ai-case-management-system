@@ -24,6 +24,7 @@ public sealed class DocumentsController : ControllerBase
 
     private readonly SubmitDocumentHandler _submitHandler;
     private readonly GetDocumentByIdHandler _getByIdHandler;
+    private readonly DownloadDocumentHandler _downloadHandler;
     private readonly ListDocumentsByTenantHandler _listHandler;
     private readonly SearchDocumentsHandler _searchHandler;
     private readonly GetDashboardStatsHandler _statsHandler;
@@ -32,6 +33,7 @@ public sealed class DocumentsController : ControllerBase
     public DocumentsController(
         SubmitDocumentHandler submitHandler,
         GetDocumentByIdHandler getByIdHandler,
+        DownloadDocumentHandler downloadHandler,
         ListDocumentsByTenantHandler listHandler,
         SearchDocumentsHandler searchHandler,
         GetDashboardStatsHandler statsHandler,
@@ -39,6 +41,7 @@ public sealed class DocumentsController : ControllerBase
     {
         _submitHandler = submitHandler;
         _getByIdHandler = getByIdHandler;
+        _downloadHandler = downloadHandler;
         _listHandler = listHandler;
         _searchHandler = searchHandler;
         _statsHandler = statsHandler;
@@ -120,6 +123,49 @@ public sealed class DocumentsController : ControllerBase
             return NotFound(ApiResponse<DocumentDto>.Fail("NOT_FOUND", "Document not found"));
 
         return Ok(ApiResponse<DocumentDto>.Ok(result.Value));
+    }
+
+    /// <summary>
+    /// Downloads the original uploaded file for a document.
+    /// </summary>
+    /// <param name="id">Document identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The original file as a download stream.</returns>
+    /// <response code="200">File returned successfully.</response>
+    /// <response code="401">Not authenticated.</response>
+    /// <response code="404">Document or file not found.</response>
+    [HttpGet("{id:guid}/file")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadFile(Guid id, CancellationToken ct)
+    {
+        var tenantId = _tenantContext.TenantId!.Value;
+        var result = await _downloadHandler.HandleAsync(id, tenantId, ct);
+
+        if (result.IsFailure)
+        {
+            if (result.Error.Code == "NOT_FOUND")
+                return NotFound(ApiResponse<object>.Fail("NOT_FOUND", result.Error.Message));
+            return StatusCode(500, ApiResponse<object>.Fail(result.Error.Code, "An internal error occurred"));
+        }
+
+        var (stream, fileName) = result.Value;
+        var contentType = GetContentType(fileName);
+        return File(stream, contentType, fileName);
+    }
+
+    private static string GetContentType(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".tiff" or ".tif" => "image/tiff",
+            _ => "application/octet-stream",
+        };
     }
 
     /// <summary>

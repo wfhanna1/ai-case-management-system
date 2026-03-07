@@ -20,6 +20,7 @@ public sealed class DocumentsControllerValidationTests
         _controller = new DocumentsController(
             new SubmitDocumentHandler(null!, null!, null!, NullLogger<SubmitDocumentHandler>.Instance),
             new GetDocumentByIdHandler(null!),
+            new DownloadDocumentHandler(null!, null!),
             new ListDocumentsByTenantHandler(null!),
             new SearchDocumentsHandler(null!),
             new GetDashboardStatsHandler(null!, null!),
