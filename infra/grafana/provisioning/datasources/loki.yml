@@ -10,7 +10,7 @@ datasources:
     jsonData:
       derivedFields:
         - name: TraceId
-          matcherRegex: '"TraceId":"([a-f0-9]+)"'
+          matcherRegex: '"[Tt]raceId":"([a-f0-9]+)"'
           url: "$${__value.raw}"
           datasourceUid: tempo
           urlDisplayLabel: View Trace
