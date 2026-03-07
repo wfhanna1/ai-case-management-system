@@ -114,4 +114,15 @@ describe('ProtectedRoute', () => {
 
     expect(screen.getByTestId('dashboard-page')).toBeInTheDocument();
   });
+
+  it('renders children when requiredRole is Admin and user is Admin', () => {
+    mockAuthStore.mockReturnValue({
+      isAuthenticated: true,
+      hasRole: (role: string) => role === 'Admin',
+    });
+
+    renderWithRoute('Admin');
+
+    expect(screen.getByTestId('protected-content')).toBeInTheDocument();
+  });
 });

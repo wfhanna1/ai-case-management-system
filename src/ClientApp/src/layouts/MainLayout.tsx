@@ -86,7 +86,7 @@ function MainLayout() {
               </IconButton>
 
               {/* Desktop inline nav */}
-              <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', flexWrap: 'nowrap' }}>
+              <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
                 {visibleNavItems.map(item => (
                   <Button
                     key={item.path}

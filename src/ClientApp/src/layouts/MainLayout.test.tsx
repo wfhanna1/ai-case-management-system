@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
@@ -102,6 +103,41 @@ describe('MainLayout', () => {
       renderLayout();
       expect(screen.getByRole('button', { name: /Reviews/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Upload/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('when user has multiple roles', () => {
+    beforeEach(() => {
+      mockAuthStore.mockReturnValue({
+        isAuthenticated: true,
+        user: { email: 'multi@alpha.demo', roles: ['IntakeWorker', 'Reviewer'] },
+        clearAuth: vi.fn(),
+      });
+    });
+
+    it('sees union of allowed items (both Upload and Reviews)', () => {
+      renderLayout();
+      expect(screen.getByRole('button', { name: /Upload/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Reviews/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('sign out', () => {
+    const mockClearAuth = vi.fn();
+
+    beforeEach(() => {
+      mockAuthStore.mockReturnValue({
+        isAuthenticated: true,
+        user: { email: 'admin@alpha.demo', roles: ['Admin'] },
+        clearAuth: mockClearAuth,
+      });
+    });
+
+    it('calls clearAuth when Sign Out is clicked', async () => {
+      renderLayout();
+      const signOutBtn = screen.getByRole('button', { name: /Sign Out/i });
+      await userEvent.click(signOutBtn);
+      expect(mockClearAuth).toHaveBeenCalled();
     });
   });
 
