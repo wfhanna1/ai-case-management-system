@@ -265,7 +265,7 @@ Each service follows the same four-layer hexagonal (ports-and-adapters) structur
 
 ### Why Hexagonal Architecture
 
-The domain layer defines port interfaces (e.g., `IDocumentRepository`, `IFileStoragePort`, `IMessageBusPort`) that infrastructure adapters implement. This keeps the domain free of framework dependencies: the `IntakeDocument` aggregate does not know about EF Core, RabbitMQ, or the filesystem. The benefit is testability -- every handler can be tested with hand-written test doubles that implement the same port interfaces, without spinning up databases or message brokers.
+All business logic lives in the Domain layer. Aggregates enforce their own invariants -- state transitions, validation, and tenant ownership -- without any knowledge of how data is persisted or messages are dispatched. The domain layer defines port interfaces (e.g., `IDocumentRepository`, `IFileStoragePort`, `IMessageBusPort`) that infrastructure adapters implement. Infrastructure contains zero business logic; adapters only translate between domain contracts and external systems. This keeps the domain free of framework dependencies: the `IntakeDocument` aggregate does not know about EF Core, RabbitMQ, or the filesystem. The benefit is testability -- every handler can be tested with hand-written test doubles that implement the same port interfaces, without spinning up databases or message brokers.
 
 Dependencies always point inward: Infrastructure depends on Domain, never the reverse. Application depends on Domain for entities and ports. The Host/WebApi layer is the composition root that wires everything together via DI.
 
@@ -507,7 +507,7 @@ The document processing pipeline has clear bounded contexts with different scali
 
 ### Why hexagonal architecture?
 
-Hexagonal architecture was chosen to decouple business logic from infrastructure concerns. The primary benefit is testability: every handler in the Application layer can be tested with hand-written in-memory test doubles that implement the port interfaces. No database, no message broker, no file system needed for unit tests. The secondary benefit is portability: swapping from local file storage to Azure Blob requires changing only the adapter registration in the composition root, not any business logic.
+Hexagonal architecture was chosen to decouple business logic from infrastructure concerns. All business logic lives inside the Domain layer -- aggregates enforce their own invariants (state transitions, validation rules, tenant ownership checks) and the Application layer orchestrates use cases by calling domain methods and port interfaces. Infrastructure adapters contain zero business logic; they only translate between domain contracts and external systems (EF Core, RabbitMQ, filesystem). The primary benefit is testability: every handler in the Application layer can be tested with hand-written in-memory test doubles that implement the port interfaces. No database, no message broker, no file system needed for unit tests. The secondary benefit is portability: swapping from local file storage to Azure Blob requires changing only the adapter registration in the composition root, not any business logic.
 
 ### Why DDD with aggregates and value objects?
 
