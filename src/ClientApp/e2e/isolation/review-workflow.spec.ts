@@ -31,6 +31,11 @@ reviewerTest.describe('Review workflow', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({})) })
     );
 
+    // Mock pending reviews endpoint for post-finalize navigation
+    await page.route('**/api/reviews/pending*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: [], totalCount: 0 })) })
+    );
+
     await page.goto(`/reviews/${docId}`);
     await expect(page.getByTestId('review-status')).toHaveText('InReview');
 
@@ -38,8 +43,9 @@ reviewerTest.describe('Review workflow', () => {
     await page.getByTestId('finalize-btn').click();
     await page.getByTestId('confirm-finalize-btn').click();
 
-    // After finalize, status should update to Finalized
-    await expect(page.getByTestId('review-status')).toHaveText('Finalized', { timeout: 10000 });
+    // After finalize, app navigates to review queue
+    await page.waitForURL('**/reviews', { timeout: 10000 });
+    await expect(page.getByText('Review Queue')).toBeVisible();
   });
 
   reviewerTest('correct field saves corrected value', async ({ reviewerPage: page }) => {

@@ -117,11 +117,12 @@ function ReviewDetailPage() {
 
   const finalizeMutation = useMutation({
     mutationFn: () => finalizeReview(id!),
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['review', id] });
-      queryClient.invalidateQueries({ queryKey: ['pendingReviews'] });
+      await queryClient.invalidateQueries({ queryKey: ['pendingReviews'] });
       setFinalizeOpen(false);
       setActionError(null);
+      navigate('/reviews');
     },
     onError: (err: Error) => {
       setFinalizeOpen(false);

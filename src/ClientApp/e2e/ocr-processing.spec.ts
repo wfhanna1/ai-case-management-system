@@ -129,6 +129,8 @@ test.describe('OCR processing pipeline', () => {
     await expect(page.getByText('Are you sure you want to finalize this review?')).toBeVisible();
     await page.getByTestId('confirm-finalize-btn').click();
 
-    await expect(page.getByText('This document has been finalized.')).toBeVisible({ timeout: 10000 });
+    // After finalize, app navigates back to review queue
+    await page.waitForURL('**/reviews', { timeout: 10000 });
+    await expect(page.getByText('Review Queue')).toBeVisible();
   });
 });
