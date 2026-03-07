@@ -21,13 +21,4 @@ public interface IMessageBusPort
         string storageKey,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Publishes a request for vector embedding of extracted document text.
-    /// </summary>
-    Task<Result<Unit>> PublishEmbeddingRequestedAsync(
-        DocumentId documentId,
-        TenantId tenantId,
-        string textContent,
-        Dictionary<string, string> fieldValues,
-        CancellationToken ct = default);
 }

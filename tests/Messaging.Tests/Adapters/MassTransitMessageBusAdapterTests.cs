@@ -59,52 +59,6 @@ public sealed class MassTransitMessageBusAdapterTests
     }
 
     [Fact]
-    public async Task PublishEmbeddingRequestedAsync_PublishesEmbeddingRequestedEvent()
-    {
-        await using var provider = new ServiceCollection()
-            .AddMassTransitTestHarness()
-            .BuildServiceProvider(true);
-
-        var harness = provider.GetRequiredService<ITestHarness>();
-        await harness.Start();
-
-        try
-        {
-            var adapter = new MassTransitMessageBusAdapter(harness.Bus);
-
-            var documentId = DocumentId.New();
-            var tenantId = TenantId.New();
-            var fieldValues = new Dictionary<string, string>
-            {
-                ["PatientName"] = "Jane Doe",
-                ["Condition"] = "Hypertension"
-            };
-
-            var result = await adapter.PublishEmbeddingRequestedAsync(
-                documentId: documentId,
-                tenantId: tenantId,
-                textContent: "Patient Jane Doe with hypertension.",
-                fieldValues: fieldValues);
-
-            Assert.True(result.IsSuccess);
-            Assert.True(await harness.Published.Any<EmbeddingRequestedEvent>());
-
-            var published = harness.Published
-                .Select<EmbeddingRequestedEvent>()
-                .First();
-
-            Assert.Equal(documentId.Value, published.Context.Message.DocumentId);
-            Assert.Equal(tenantId.Value, published.Context.Message.TenantId);
-            Assert.Equal("Patient Jane Doe with hypertension.", published.Context.Message.TextContent);
-            Assert.Equal(2, published.Context.Message.FieldValues.Count);
-        }
-        finally
-        {
-            await harness.Stop();
-        }
-    }
-
-    [Fact]
     public async Task PublishDocumentUploadedAsync_ReturnsFailure_WhenPublishThrows()
     {
         // AlwaysThrowingPublishEndpoint simulates a bus that cannot connect.
@@ -117,22 +71,6 @@ public sealed class MassTransitMessageBusAdapterTests
             tenantId: TenantId.New(),
             fileName: "file.pdf",
             storageKey: "tenants/abc/file.pdf");
-
-        Assert.True(result.IsFailure);
-        Assert.Equal("PUBLISH_FAILED", result.Error.Code);
-    }
-
-    [Fact]
-    public async Task PublishEmbeddingRequestedAsync_ReturnsFailure_WhenPublishThrows()
-    {
-        var brokenEndpoint = new AlwaysThrowingPublishEndpoint();
-        var adapter = new MassTransitMessageBusAdapter(brokenEndpoint);
-
-        var result = await adapter.PublishEmbeddingRequestedAsync(
-            documentId: DocumentId.New(),
-            tenantId: TenantId.New(),
-            textContent: "text",
-            fieldValues: new Dictionary<string, string>());
 
         Assert.True(result.IsFailure);
         Assert.Equal("PUBLISH_FAILED", result.Error.Code);

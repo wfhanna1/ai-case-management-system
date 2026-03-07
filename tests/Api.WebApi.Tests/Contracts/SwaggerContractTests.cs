@@ -144,9 +144,5 @@ public sealed class SwaggerContractTests : IClassFixture<SwaggerContractTests.Te
             string fileName, string storageKey, CancellationToken ct = default)
             => Task.FromResult(Result<Unit>.Success(Unit.Value));
 
-        public Task<Result<Unit>> PublishEmbeddingRequestedAsync(
-            DocumentId documentId, TenantId tenantId, string textContent,
-            Dictionary<string, string> fieldValues, CancellationToken ct = default)
-            => Task.FromResult(Result<Unit>.Success(Unit.Value));
     }
 }
