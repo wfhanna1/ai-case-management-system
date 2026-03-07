@@ -110,11 +110,101 @@ public sealed class DevelopmentDbSeeder : IHostedService
             ["DocumentTitle:Damaged Document", "Date:2024-11-15", "Content:Partial text only"],
             DocumentStatus.PendingReview));
 
+        // Bulk-generate 200+ synthetic cases across both tenants.
+        var bulkCaseCount = SeedBulkCases(db, alpha, beta);
+
         await db.SaveChangesAsync();
         _logger.LogInformation(
-            "Seeded {CaseCount} cases with {DocCount} documents for demo tenants",
-            alphaCases.Length + 1,
-            alphaCases.Sum(c => c.docs.Length) + 3);
+            "Seeded {CaseCount} cases with documents for demo tenants",
+            alphaCases.Length + 1 + bulkCaseCount);
+    }
+
+    private static int SeedBulkCases(IntakeDbContext db, TenantId alpha, TenantId beta)
+    {
+        var firstNames = new[]
+        {
+            "James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda",
+            "William", "Elizabeth", "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica",
+            "Thomas", "Sarah", "Charles", "Karen", "Christopher", "Lisa", "Daniel", "Nancy",
+            "Matthew", "Betty", "Anthony", "Margaret", "Mark", "Sandra", "Donald", "Ashley",
+            "Steven", "Kimberly", "Paul", "Emily", "Andrew", "Donna", "Joshua", "Michelle",
+            "Kenneth", "Dorothy", "Kevin", "Carol", "Brian", "Amanda", "George", "Melissa",
+            "Timothy", "Deborah", "Ronald", "Stephanie", "Edward", "Rebecca", "Jason", "Sharon",
+            "Jeffrey", "Laura", "Ryan", "Cynthia", "Jacob", "Kathleen", "Gary", "Amy",
+            "Nicholas", "Angela", "Eric", "Shirley", "Jonathan", "Anna", "Stephen", "Brenda",
+            "Larry", "Pamela", "Justin", "Emma", "Scott", "Nicole", "Brandon", "Helen",
+        };
+
+        var lastNames = new[]
+        {
+            "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
+            "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
+            "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson",
+            "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker",
+            "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
+            "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
+            "Carter", "Roberts",
+        };
+
+        var caseTypes = new[] { "CW", "AP", "HA", "MH" };
+        var formTypes = new[] { "ChildWelfare", "AdultProtective", "HousingAssistance", "MentalHealth" };
+        var statuses = new[] { DocumentStatus.PendingReview, DocumentStatus.InReview, DocumentStatus.Finalized };
+        var streets = new[] { "Main St", "Oak Ave", "Pine Rd", "Elm Blvd", "Cedar Ln", "Maple Dr", "Birch Way", "Walnut Ct", "Spruce Pl", "Ash Ter" };
+
+        var rng = new Random(42);
+        var count = 0;
+
+        // 160 cases for Alpha, 50 for Beta
+        foreach (var (tenant, caseCount) in new[] { (alpha, 160), (beta, 50) })
+        {
+            var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (var i = 0; i < caseCount; i++)
+            {
+                string name;
+                do
+                {
+                    var first = firstNames[rng.Next(firstNames.Length)];
+                    var last = lastNames[rng.Next(lastNames.Length)];
+                    name = $"{first} {last}";
+                } while (!usedNames.Add(name));
+                var caseType = caseTypes[rng.Next(caseTypes.Length)];
+                var caseNumber = $"{caseType}-2024-{rng.Next(1000, 9999)}";
+                var dob = new DateOnly(rng.Next(1950, 2005), rng.Next(1, 13), rng.Next(1, 28));
+                var address = $"{rng.Next(100, 9999)} {streets[rng.Next(streets.Length)]}";
+                var status = statuses[rng.Next(statuses.Length)];
+
+                var @case = Case.Create(tenant, name);
+
+                // Each case gets 1-3 documents.
+                var docCount = rng.Next(1, 4);
+                for (var d = 0; d < docCount; d++)
+                {
+                    var docStatus = d == 0 ? status : statuses[rng.Next(statuses.Length)];
+                    var formType = formTypes[rng.Next(formTypes.Length)];
+                    var nameParts = name.Split(' ');
+                    var fileName = $"intake-{nameParts[0].ToLower()}-{nameParts[1].ToLower()}-{d + 1}.pdf";
+                    var fields = new[]
+                    {
+                        $"ClientName:{name}",
+                        $"DateOfBirth:{dob:yyyy-MM-dd}",
+                        $"CaseNumber:{caseNumber}",
+                        $"Address:{address}",
+                        $"FormType:{formType}",
+                    };
+
+                    var doc = CreateProcessedDocument(tenant, fileName, fields, docStatus);
+                    doc.AssignToCase(@case.Id);
+                    @case.LinkDocument(doc);
+                    db.Documents.Add(doc);
+                }
+
+                db.Cases.Add(@case);
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static IntakeDocument CreateProcessedDocument(
