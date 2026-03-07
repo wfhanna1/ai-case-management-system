@@ -240,6 +240,7 @@ builder.Services.AddTransient<ListCasesHandler>();
 builder.Services.AddTransient<GetCaseByIdHandler>();
 builder.Services.AddTransient<SearchCasesHandler>();
 builder.Services.AddTransient<AssignDocumentToCaseHandler>();
+builder.Services.AddTransient<CompleteDocumentProcessingHandler>();
 builder.Services.AddTransient<GetSimilarCasesHandler>();
 builder.Services.AddTransient<GetDashboardStatsHandler>();
 builder.Services.AddTransient<GetRecentActivitiesHandler>();
