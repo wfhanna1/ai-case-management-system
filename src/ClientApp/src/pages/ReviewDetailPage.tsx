@@ -80,6 +80,7 @@ function ReviewDetailPage() {
     queryKey: ['review', id],
     queryFn: () => getReview(id!),
     enabled: !!id,
+    staleTime: 0,
     refetchInterval: 3000,
   });
 
@@ -87,12 +88,14 @@ function ReviewDetailPage() {
     queryKey: ['audit', id],
     queryFn: () => getAuditTrail(id!),
     enabled: auditOpen && !!id,
+    staleTime: 0,
   });
 
   const { data: similarData, isLoading: similarLoading } = useQuery({
     queryKey: ['similar-cases', id],
     queryFn: () => getSimilarCases(id!),
     enabled: !!id,
+    staleTime: 0,
   });
 
   const { data: fileBlob, isError: fileError } = useQuery({

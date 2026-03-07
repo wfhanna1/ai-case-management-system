@@ -38,6 +38,7 @@ function ReviewQueuePage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['pendingReviews', page, pageSize],
     queryFn: () => getPendingReviews(page + 1, pageSize),
+    staleTime: 0,
     refetchInterval: 5000,
   });
 

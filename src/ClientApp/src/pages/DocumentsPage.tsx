@@ -39,6 +39,7 @@ function DocumentsPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['documents'],
     queryFn: () => getDocuments(),
+    staleTime: 0,
     refetchInterval: 5000,
   });
 
