@@ -36,7 +36,7 @@ export function useDocumentSearch(): UseDocumentSearchReturn {
   const [fieldValue, setFieldValue] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [page, setPage] = useState(0);
+  const [page, setPageRaw] = useState(0);
   const [pageSize, setPageSizeRaw] = useState(20);
   const [searchTriggered, setSearchTriggered] = useState(false);
 
@@ -55,7 +55,7 @@ export function useDocumentSearch(): UseDocumentSearchReturn {
   }, [fromDate, toDate]);
 
   const handleSearch = useCallback(() => {
-    setPage(0);
+    setPageRaw(0);
     setSearchTriggered(true);
     // Build params with page reset to 0
     const params: SearchDocumentsParams = {
@@ -76,14 +76,20 @@ export function useDocumentSearch(): UseDocumentSearchReturn {
     setFieldValue('');
     setFromDate('');
     setToDate('');
-    setPage(0);
+    setPageRaw(0);
     setSearchTriggered(false);
     queryClient.removeQueries({ queryKey: ['searchDocuments'] });
   }, [queryClient]);
 
+  const setPage = useCallback((newPage: number) => {
+    setPageRaw(newPage);
+    setCommittedParams(prev => ({ ...prev, page: newPage + 1 }));
+  }, []);
+
   const setPageSize = useCallback((size: number) => {
     setPageSizeRaw(size);
-    setPage(0);
+    setPageRaw(0);
+    setCommittedParams(prev => ({ ...prev, pageSize: size, page: 1 }));
   }, []);
 
   const { data, isLoading, isError, error } = useQuery({

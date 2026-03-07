@@ -187,6 +187,40 @@ describe('useDocumentSearch', () => {
     expect(result.current.page).toBe(0);
   });
 
+  it('setPage updates committedParams so pagination triggers a new query', () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDocumentSearch(), { wrapper });
+
+    act(() => {
+      result.current.handleSearch();
+    });
+
+    expect(result.current.committedParams.page).toBe(1);
+
+    act(() => {
+      result.current.setPage(2);
+    });
+
+    // committedParams.page should be 3 (0-indexed page 2 -> 1-indexed page 3)
+    expect(result.current.committedParams.page).toBe(3);
+  });
+
+  it('setPageSize updates committedParams and resets to page 1', () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDocumentSearch(), { wrapper });
+
+    act(() => {
+      result.current.handleSearch();
+    });
+
+    act(() => {
+      result.current.setPageSize(50);
+    });
+
+    expect(result.current.committedParams.pageSize).toBe(50);
+    expect(result.current.committedParams.page).toBe(1);
+  });
+
   it('builds params with end-of-day for toDate', () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useDocumentSearch(), { wrapper });
