@@ -206,9 +206,10 @@ public sealed class TesseractOcrAdapter : IOcrPort
     private static Dictionary<string, ExtractedField> ParseFields(string rawText)
     {
         var fields = new Dictionary<string, ExtractedField>();
-        var matches = KeyValuePattern.Matches(rawText);
 
-        foreach (Match match in matches)
+        // Strategy 1: "Key: Value" on the same line
+        var colonMatches = KeyValuePattern.Matches(rawText);
+        foreach (Match match in colonMatches)
         {
             var key = match.Groups[1].Value.Trim();
             var value = match.Groups[2].Value.Trim();
@@ -216,12 +217,73 @@ public sealed class TesseractOcrAdapter : IOcrPort
 
             if (!string.IsNullOrWhiteSpace(normalizedKey) && !string.IsNullOrWhiteSpace(value))
             {
-                // CLI doesn't give per-field confidence; use 0.9 as baseline for successful extraction
                 fields[normalizedKey] = new ExtractedField(normalizedKey, value, 0.9);
             }
         }
 
+        // Strategy 2: Form labels ending with " *" followed by a value on the next line.
+        // Handles both plain text values and radio/checkbox selections.
+        var lines = rawText.Split('\n', StringSplitOptions.None);
+        for (var i = 0; i < lines.Length - 1; i++)
+        {
+            var line = lines[i].Trim();
+            if (!line.EndsWith(" *", StringComparison.Ordinal) &&
+                !line.EndsWith(" *)", StringComparison.Ordinal))
+                continue;
+
+            // Strip trailing * and any leading punctuation (OCR artifacts like ')
+            var label = line.TrimEnd('*').TrimEnd().TrimStart('\'', '\u2018', '\u2019');
+            if (string.IsNullOrWhiteSpace(label))
+                continue;
+
+            // Collect the next non-empty line as the value
+            string? value = null;
+            for (var j = i + 1; j < lines.Length; j++)
+            {
+                var candidate = lines[j].Trim();
+                if (string.IsNullOrWhiteSpace(candidate))
+                    continue;
+
+                // If this line looks like another label, there's no value
+                if (candidate.EndsWith(" *", StringComparison.Ordinal))
+                    break;
+
+                value = candidate;
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            // Radio/checkbox: look for the selected option marked with @ or ©
+            // e.g. "OPhysical OEmotional @Neglect O Sexual"
+            var selectedOption = ExtractSelectedOption(value);
+            if (selectedOption != null)
+                value = selectedOption;
+
+            var normalizedKey = NormalizeFieldKey(label);
+            if (!string.IsNullOrWhiteSpace(normalizedKey) && !fields.ContainsKey(normalizedKey))
+            {
+                fields[normalizedKey] = new ExtractedField(normalizedKey, value, 0.85);
+            }
+        }
+
         return fields;
+    }
+
+    // Extracts the selected option from OCR'd radio/checkbox lines.
+    // Tesseract renders unselected circles as "O" and selected ones as "@" or "©".
+    private static string? ExtractSelectedOption(string line)
+    {
+        // Must have at least one unselected marker to be a radio line
+        if (!line.Contains(" O ", StringComparison.Ordinal) &&
+            !line.StartsWith("O", StringComparison.Ordinal))
+            return null;
+
+        // Split on the O/@ markers and find the one preceded by @ or ©
+        var optionPattern = new Regex(@"(?:^|[\s])[@©\u00A9](\w[\w\s\-]*)");
+        var match = optionPattern.Match(line);
+        return match.Success ? match.Groups[1].Value.Trim() : null;
     }
 
     private static string NormalizeFieldKey(string key)
