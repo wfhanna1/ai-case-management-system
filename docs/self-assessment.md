@@ -1,8 +1,5 @@
 # Self-Assessment
 
-An honest evaluation of the Intake Document Processor system: what was built, what is missing, the trade-offs made, and how AI tools were used throughout development.
-
----
 
 ## Planning and Backlog
 
@@ -23,6 +20,15 @@ After receiving the project requirements document, I uploaded it to Claude Code 
 | 8 | Documentation |
 
 I then created the backlog as GitHub Issues and organized them in a GitHub Project board to track progress across all phases.
+
+
+### Phased execution
+
+I began by working on the Phase 0 and Phase 1 architecture stories individually, since those foundational decisions (solution structure, hexagonal architecture, multi-tenancy, authentication) were the most critical to get right early. Each story was reviewed and validated before moving on. The development process within each story was iterative: I would describe what I wanted, Claude would implement it, and I would review the output and request changes.
+
+As the project matured and a safety net of quality gates emerged (unit and integration tests, contract drift tests, and a growing suite of Playwright isolation and E2E tests), I shifted to working through the backlog one full phase at a time. After completing each phase, I performed manual testing of the entire application to catch issues that automated tests might miss, then ran a code review pass before merging into main.
+
+This phased approach provided a balance between moving quickly and maintaining confidence in the system. Early phases demanded careful, story-by-story attention. Later phases benefited from the accumulated test coverage, which made it safe to move faster without sacrificing quality.
 
 ---
 
@@ -67,6 +73,7 @@ I then created the backlog as GitHub Issues and organized them in a GitHub Proje
 - **Domain-Driven Design** with aggregates enforcing their own invariants, value objects for type safety, static factory methods, and domain events
 - **Result\<T\> pattern** everywhere, eliminating exception-driven control flow for business failures
 - **Strongly-typed IDs** (DocumentId, CaseId, TenantId, etc.) preventing cross-type ID confusion at compile time
+- Please reference [archiecture.md](./architecture.md) for in depth archiecture review
 
 ### Multi-Tenancy
 - **Row-level isolation** via EF Core global query filters on all tenant-scoped entities
@@ -101,7 +108,6 @@ I then created the backlog as GitHub Issues and organized them in a GitHub Proje
 - **102 Playwright isolation tests** (real browser, mocked API) across 20 spec files
 - **53 Playwright E2E tests** (real browser, full running stack) across 15 spec files
 - **OpenAPI and AsyncAPI contract drift tests** providing bidirectional comparison of runtime output against checked-in YAML specs
-- **Hand-written test doubles** (no mocking frameworks) for all port interfaces
 
 ### DevOps
 - **Docker Compose** orchestrating 11 services with health checks and dependency ordering
@@ -111,28 +117,27 @@ I then created the backlog as GitHub Issues and organized them in a GitHub Proje
 
 ---
 
-## Missing Items
+## Where To Go From Here
 
 ### Production Readiness
-- ~~**Real embedding model.**~~ Resolved. `LocalEmbeddingAdapter` uses SmartComponents `bge-micro-v2` model (384-dim, CPU-only, ~23MB). Runs inside the RagService process with no external dependencies. Configurable via `Embedding:Provider` (default: `local`, fallback: `mock`).
+- Enhancements to the embedding model and connecting it to a cloud based LLM provider.
 - **Cloud file storage.** LocalFileStorageAdapter writes to the local filesystem. Needs Azure Blob Storage or S3 for production.
 - **LLM-based case summaries.** TemplateSummaryAdapter uses string templates. Needs an LLM to generate meaningful case narrative summaries.
 - **Rate limiting.** No rate limiting on API endpoints. Should add middleware or use a reverse proxy.
 - **HTTPS.** Docker Compose runs everything over HTTP. Production needs TLS termination (nginx or a load balancer).
 - **Database migrations in production.** EF Core auto-migrates on startup, which is not safe for production. Needs a migration pipeline.
 
-### Features Not Implemented
-- **User management UI.** No admin interface for creating/editing users or managing roles. Users are seeded or created via the register endpoint.
-- **Batch operations.** No bulk upload, bulk review, or bulk status changes.
-- **Notifications.** No email or in-app notifications when documents are ready for review.
-- **Document versioning.** No support for re-uploading or versioning documents.
+### Features To Implement Next
+- **User management UI.** An admin interface for creating/editing users or managing roles. Users are seeded or created via the register endpoint.
+- **Batch operations.** Bulk upload, bulk review, or bulk status changes.
+- **Notifications.** Email or in-app notifications when documents are ready for review.
+- **Document versioning.** Support for re-uploading or versioning documents.
 - **Pagination on all list endpoints.** Most list endpoints are paginated, but some edge cases may not be.
 - **Audit log export.** Audit trail is viewable but not exportable (CSV, PDF).
 
-### Test Gaps
-- **No load/performance tests.** No k6 or similar load testing to validate throughput under concurrent users.
-- **No chaos testing.** No verification of behavior when services crash mid-processing (for example, the OCR worker dies after consuming but before publishing).
-- **Frontend unit test coverage is thin.** Only ~10 Vitest tests covering auth store and utilities. Component-level unit tests are covered by Playwright isolation tests instead.
+### Test Enhancements
+- **Load/performance tests.** load testing to validate throughput under concurrent users.
+- **Chaos testing.** Verification of behavior when services crash mid-processing (for example, the OCR worker dies after consuming but before publishing).
 
 ---
 
@@ -201,14 +206,6 @@ Migrations run automatically when the API starts. This is convenient for develop
 
 ## Development Approach and AI Tool Usage
 
-### Phased execution
-
-I began by working on the Phase 0 and Phase 1 architecture stories individually, since those foundational decisions (solution structure, hexagonal architecture, multi-tenancy, authentication) were the most critical to get right early. Each story was reviewed and validated before moving on. The development process within each story was iterative: I would describe what I wanted, Claude would implement it, and I would review the output and request changes.
-
-As the project matured and a safety net of quality gates emerged (unit and integration tests, contract drift tests, and a growing suite of Playwright isolation and E2E tests), I shifted to working through the backlog one full phase at a time. After completing each phase, I performed manual testing of the entire application to catch issues that automated tests might miss, then ran a code review pass before merging into main.
-
-This phased approach provided a balance between moving quickly and maintaining confidence in the system. Early phases demanded careful, story-by-story attention. Later phases benefited from the accumulated test coverage, which made it safe to move faster without sacrificing quality.
-
 ### How AI was used throughout
 
 **Architecture and design.** I made the key architectural decisions: microservices over monolith, hexagonal architecture, DDD with aggregates, row-level multi-tenancy, Result\<T\> over exceptions. Claude translated those decisions into concrete code structures, project layouts, and dependency injection configurations. When Claude proposed alternatives (for example, using MediatR for command dispatch), I evaluated and either accepted or redirected based on the project's goals.
@@ -225,7 +222,7 @@ This phased approach provided a balance between moving quickly and maintaining c
 
 - **Ralph Loop** (`/ralph-loop`): a recurring loop that runs a prompt or slash command on a configurable interval within the same session. This was used to continuously monitor test results, re-run builds, and catch regressions during active development without manual re-invocation.
 
-- **Enterprise Agent Team** (`/enterprise-agent-team`): a custom multi-agent plugin that spawns specialized subagents (backend engineer, frontend engineer, QA engineer, platform engineer, security reviewer, code reviewer, tech lead) to work on tasks in parallel. Each agent operates with scoped tool access and domain focus. For example, the backend engineer and frontend engineer could implement both sides of a new feature simultaneously, while the QA engineer wrote tests in parallel. A tech lead agent coordinated cross-cutting concerns.
+- **Enterprise Agent Team** (`/enterprise-agent-team`): a custom multi-agent plugin that spawns specialized teammate agents (backend engineer, frontend engineer, QA engineer, platform engineer, security reviewer, code reviewer, tech lead) to work on tasks in parallel. Each agent operates with scoped tool access and domain focus. For example, the backend engineer and frontend engineer could implement both sides of a new feature simultaneously, while the QA engineer wrote tests in parallel. A tech lead agent coordinated cross-cutting concerns.
 
 These plugins, combined with the TDD skill and the accumulated test suite as a safety net, allowed later phases to move significantly faster. The trade-off was higher token consumption: parallel agents and recurring loops burn through context quickly, and the Enterprise Agent Team in particular consumed substantially more tokens per phase than single-agent development. The parallelization was worth it for throughput, but it required careful prompt design to avoid agents duplicating or conflicting with each other's work.
 
@@ -233,31 +230,34 @@ These plugins, combined with the TDD skill and the accumulated test suite as a s
 
 ### Example prompts
 
-- "Set up the solution structure with hexagonal architecture and DDD patterns"
-- "Implement document upload with local file storage and publish a DocumentUploadedEvent"
-- "Add multi-tenancy with row-level isolation using EF Core global query filters"
-- "Write Playwright isolation tests for the review workflow"
-- "The Playwright navigation tests are failing. The tests are isolated so they should not need a running backend. Investigate why."
+- "Pull down issue #1 and start working on it, making sure you action on all the tasks in the issue and move it to the appropriate column on the board"
+
+- "/ralph-loop:ralph-loop "/code-review then keep going until you finish all phase 6 stories, quality gate and code review. make sure to follow TDD and playwright for testing pyramind generation and execution of isolated testing, component testing, functional testing with end to end testing and run /code-review to make sure you are done and no issues comes out of the review. Bring up docker and make sure
+all tests pass" --max-iterations 20 --completion-promise "All stories and tasks in phase 6 are complete"
+
+- "Write Playwright isolation tests for this phase"
+
+- "/enterprise-agent-team:enterprise-agent-team execute phase 5 and parallelize the work as much as possible"
+
 - "Refactor FinalizeReviewHandler to use a domain method for the PendingReview-to-InReview auto-transition instead of doing the state check in the application layer"
-- "Add 200+ seed data cases with realistic field values"
-- "Run the full test suite and fix any failures"
-- "/ralph-loop 5m dotnet test" (recurring test monitoring during active development)
-- "/enterprise-agent-team" followed by delegating backend, frontend, and QA work to parallel agents
+
+- "Run the full testing suite"
+
+- "Pull stories from the ready column, make sure to action all the tasks in the story before moving it to the done column, then commit, push and merge"
 
 ### What worked well
 - TDD enforcement caught bugs early and made refactoring safe
 - The port/adapter pattern made it easy to swap between mock and real implementations
 - Playwright isolation tests provided high-confidence UI testing without needing the full stack
 - Claude's ability to trace through multi-layer failures (for example, a missing API mock causing a 401 causing auth clear causing a redirect) was effective
-- The Enterprise Agent Team plugin allowed parallelizing independent frontend and backend work within a single phase, reducing wall-clock time for later phases
+- The Enterprise Agent Team plugin allowed parallelizing independent frontend and backend work within a single phase, reducing cycle time for later phases
 - Ralph Loop provided continuous feedback during development without manual re-invocation
 
 ### What was challenging
 - Context window limits required session continuations, which sometimes lost context about in-progress work
-- Complex Docker Compose interactions (health checks, volume mounts, service dependencies) required trial and error
-- Playwright E2E tests are flaky when the Docker stack is not fully healthy, requiring retries
 - Parallel agent workflows consumed significantly more tokens than single-agent development, requiring awareness of cost-to-throughput trade-offs
-- Agents occasionally duplicated work or made conflicting changes when task boundaries were not clearly defined in the prompt
+- Not having access to an enterprise grade OCR library
+- Not having access to a cloud LLM provider for RAG segmentation and vector creation
 
 ---
 
@@ -265,18 +265,6 @@ These plugins, combined with the TDD skill and the accumulated test suite as a s
 
 ### If starting over
 
-1. **Start with a monolith, extract services later.** The microservice boundaries are correct, but building three services from day one added complexity to development and testing that was not needed early on. A modular monolith with clear bounded contexts could have been split later when scaling requirements became clear.
-
-2. **Use a real embedding model from the start.** The mock embedding adapter was in place for most of development, meaning similarity search results were meaningless until the local model was added late. Starting with the real model earlier would have allowed validating RAG quality throughout development rather than only at the end.
-
-3. **Add database migration tooling early.** EF Core auto-migration is fine for development, but having a proper migration pipeline (e.g., FluentMigrator or a CI step) from the start would prevent the "works on my machine" problem.
-
-4. **Invest more in frontend unit tests.** The Playwright isolation tests are valuable but slow. A layer of fast React Testing Library tests for individual components would give quicker feedback during frontend development.
-
-5. **Add structured error codes earlier.** The `ApiResponse<T>` envelope with error codes was added midway. Having it from the first endpoint would have avoided retrofitting error handling across the frontend.
-
----
-
-## Documentation Review
-
-README.md and architecture.md have been reviewed and confirmed accurate against the current codebase state, including service URLs, demo credentials, seed data counts, test counts, diagrams, and architecture decision rationales.
+1. **Add error handling earlier:** Having Grafana with Prometheus, Loki and Tempo would have helped with troubleshooting issues from the very beginning
+2. **Visual tests:** Automated visual testing to get ahead of responvie and functional features not behaving as expected. 
+3. **Hybrid Data Storage:** I would have used PostgreSQL alongside a document store such as MongoDB or DynamoDB. PostgreSQL would hold the canonical record and a foreign key reference to the corresponding document ID in the NoSQL layer. The document store would persist the processed template attributes as schema-free documents, eliminating the need for schema migrations when onboarding new template types and keeping the relational model clean.
