@@ -78,6 +78,13 @@ public sealed class DocumentUploadedConsumer : IConsumer<DocumentUploadedEvent>
             else
             {
                 _metrics?.OcrSuccessCount.Add(1);
+                _logger.LogInformation(
+                    "OCR raw text for DocumentId={DocumentId} ({Length} chars): {RawText}",
+                    message.DocumentId,
+                    ocrResult.Value.RawText.Length,
+                    ocrResult.Value.RawText.Length > 2000
+                        ? ocrResult.Value.RawText[..2000] + "..."
+                        : ocrResult.Value.RawText);
                 extractedFields = ocrResult.Value.Fields.ToDictionary(
                     kvp => kvp.Key,
                     kvp => new ExtractedFieldResult(kvp.Value.FieldName, kvp.Value.Value, kvp.Value.Confidence));

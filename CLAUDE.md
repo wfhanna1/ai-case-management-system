@@ -14,7 +14,7 @@ dotnet test                                           # Run all tests (~106 test
 dotnet test tests/SharedKernel.Tests                  # Run one test project
 dotnet test --filter "FullyQualifiedName~ClassName"   # Run single test class
 dotnet test --filter "DisplayName~test_method_name"   # Run single test method
-dotnet run --project src/ApiService/Api.WebApi        # Run API on port 5000
+dotnet run --project src/ApiService/Api.WebApi        # Run API on port 5003
 ```
 
 ### Frontend (from `src/ClientApp/`)
@@ -33,7 +33,7 @@ cp .env.example .env   # Required before first run; set passwords
 docker compose up --build
 ```
 
-Services: API (:5000), Frontend (:3000), PostgreSQL (:5432), RabbitMQ (:5672/:15672), Qdrant (:6333/:6334), Grafana (:3001), Prometheus (:9090), Loki (:3100), Tempo (:3200).
+Services: API (:5003), Frontend (:3000), PostgreSQL (:5432), RabbitMQ (:5672/:15672), Qdrant (:6333/:6334), Grafana (:3001), Prometheus (:9090), Loki (:3100), Tempo (:3200).
 
 **Loki logging driver (first time):** `docker plugin install grafana/loki-docker-driver:3.4.3 --alias loki --grant-all-permissions`
 
