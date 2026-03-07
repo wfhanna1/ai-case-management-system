@@ -119,8 +119,46 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 ### Mock adapters for some AI services
 The case summary adapter (`TemplateSummaryAdapter`) is still a mock. The embedding adapter has been replaced with a real local model (`LocalEmbeddingAdapter` using SmartComponents bge-micro-v2). The port/adapter pattern means swapping in remaining real implementations requires only a new adapter class and a DI registration change, with no business logic changes.
 
-### Row-level tenant isolation over database-per-tenant
-Three multi-tenancy strategies were considered: row-level isolation (shared database, `TenantId` column on every entity, enforced by EF Core global query filters), database-per-tenant (separate PostgreSQL databases or schemas per tenant), and subscription-level separation (tiered isolation where lower-tier tenants share infrastructure via row-level filtering while higher-tier tenants get dedicated databases or even dedicated infrastructure). I chose row-level isolation for speed of implementation given the time constraint. It keeps the infrastructure simple (one database, one connection string, one migration path) while still enforcing strict data boundaries at the query level. The trade-off is that all tenant data lives in the same physical database. If a deployment required HIPAA compliance, contractual data residency guarantees, or per-tenant backup/restore capabilities, database-per-tenant would be the right choice. For a SaaS product serving tenants at different price points, subscription-level separation would let standard-tier tenants share infrastructure while premium tenants get dedicated databases or isolated compute, balancing cost efficiency with compliance flexibility. The codebase is structured to support that migration: tenant resolution is centralized in `TenantResolutionMiddleware`, all data access goes through port interfaces, and the `ITenantContext` abstraction means switching the isolation strategy would be a DI and infrastructure change, not a domain or application layer rewrite.
+### Multi-tenancy isolation strategy
+
+**Decision:** Row-level tenant isolation via `TenantId` column and EF Core global query filters.
+
+**Context:** The system must prevent tenants from seeing each other's data across all operations (documents, cases, templates, vector search, review actions). Three strategies were evaluated:
+
+**Option 1: Row-level isolation (chosen)**
+
+All tenants share a single database. Every entity carries a `TenantId` column, and EF Core global query filters automatically scope every query.
+
+| Pros | Cons |
+|------|------|
+| Single database, single connection string, single migration path | All tenant data in the same physical database |
+| Fastest to implement and operate | A query filter bug could leak data across tenants |
+| Lowest infrastructure cost at small to medium scale | Cannot do per-tenant backup/restore independently |
+| Simple connection pooling and resource management | Noisy-neighbor risk under heavy load from one tenant |
+
+**Option 2: Database-per-tenant**
+
+Each tenant gets a dedicated PostgreSQL database (or schema). Tenant resolution maps to the correct connection string at request time.
+
+| Pros | Cons |
+|------|------|
+| Strongest physical data isolation | Connection string management grows with tenant count |
+| Per-tenant backup, restore, and scaling | Migrations must run against every database |
+| Required for some HIPAA or contractual data residency requirements | Higher infrastructure cost and operational complexity |
+| No noisy-neighbor risk at the database level | Cross-tenant reporting or analytics requires federation |
+
+**Option 3: Subscription-level separation**
+
+Tiered isolation based on tenant subscription level. Standard-tier tenants share infrastructure via row-level filtering. Premium-tier tenants get dedicated databases or dedicated compute.
+
+| Pros | Cons |
+|------|------|
+| Balances cost efficiency with compliance flexibility | Most complex to implement and reason about |
+| Premium tenants get the isolation guarantees they pay for | Two isolation codepaths to test and maintain |
+| Standard tenants keep infrastructure costs low | Tenant upgrades/downgrades require data migration |
+| Natural fit for SaaS pricing models | Operational runbooks differ by tier |
+
+**Why row-level isolation was chosen:** Given the time constraint, row-level isolation provided the fastest path to correct tenant boundaries across all operations. It keeps infrastructure simple while still enforcing strict data separation at the query level. The codebase is structured to support migrating to either alternative: tenant resolution is centralized in `TenantResolutionMiddleware`, all data access goes through port interfaces, and the `ITenantContext` abstraction means switching the isolation strategy would be a DI and infrastructure change, not a domain or application layer rewrite.
 
 ### Local file storage shared via Docker volume
 The API writes uploaded files to a local directory. The OCR worker reads from the same directory via a shared Docker volume. This works for single-node deployments but does not scale horizontally. The `IFileStoragePort` and `IFileStorageReadPort` interfaces exist specifically so this can be swapped for object storage.
