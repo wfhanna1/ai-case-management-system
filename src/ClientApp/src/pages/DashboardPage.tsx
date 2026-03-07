@@ -38,12 +38,14 @@ function DashboardPage() {
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: getDashboardStats,
+    staleTime: 0,
     refetchInterval: 30_000,
   });
 
   const { data: activities, isLoading: activitiesLoading } = useQuery({
     queryKey: ['recentActivity'],
     queryFn: () => getRecentActivity(10),
+    staleTime: 0,
     refetchInterval: 30_000,
   });
 
