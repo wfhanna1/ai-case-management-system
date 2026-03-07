@@ -28,6 +28,7 @@ COPY tests/Api.WebApi.Tests/Api.WebApi.Tests.csproj                            t
 COPY tests/OcrWorker.Tests/OcrWorker.Tests.csproj                              tests/OcrWorker.Tests/
 COPY tests/RagService.Tests/RagService.Tests.csproj                            tests/RagService.Tests/
 COPY tests/Messaging.Tests/Messaging.Tests.csproj                              tests/Messaging.Tests/
+COPY tests/RagService.IntegrationTests/RagService.IntegrationTests.csproj      tests/RagService.IntegrationTests/
 
 RUN dotnet restore src/RagService/RagService.Host/RagService.Host.csproj
 
@@ -42,9 +43,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
-USER appuser
 
-COPY --from=build /app/publish ./
+COPY --from=build --chown=appuser:appgroup /app/publish ./
+
+USER appuser
 
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080

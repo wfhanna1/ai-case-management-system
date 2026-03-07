@@ -3,20 +3,23 @@ import { test, expect } from '@playwright/test';
 test.describe('Similar cases (E2E)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('email address').fill('reviewer@alpha.demo');
-    await page.getByLabel('password').fill('Demo123!');
+    await page.getByLabel('Email').fill('reviewer@alpha.demo');
+    await page.getByLabel('Password').fill('Demo123!');
     await page.getByRole('button', { name: 'Sign In' }).click();
-    await page.waitForURL(/\/(dashboard|$)/);
+    await page.waitForURL('**/dashboard');
   });
 
   test('similar cases panel loads with results on review detail page', async ({ page }) => {
-    await page.getByRole('button', { name: 'Reviews' }).click();
-    await page.waitForURL(/\/reviews/);
+    await page.goto('/reviews');
+    await expect(page.getByText('Review Queue')).toBeVisible();
 
-    const reviewLink = page.getByRole('link', { name: 'Review' }).first();
-    await reviewLink.click();
-    await page.waitForURL(/\/reviews\/[a-f0-9-]+/);
+    // Wait for table to load and click first review button
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow.getByRole('button', { name: 'Review' })).toBeVisible({ timeout: 10000 });
+    await firstRow.getByRole('button', { name: 'Review' }).click();
+    await expect(page.getByText('Document Info')).toBeVisible({ timeout: 5000 });
 
+    // Expand similar cases panel
     const panel = page.getByTestId('similar-cases-panel');
     await expect(panel).toBeVisible();
     await panel.click();
@@ -45,14 +48,15 @@ test.describe('Similar cases (E2E)', () => {
     const loginData = await loginResponse.json();
     const token = loginData.data.accessToken;
 
-    // Navigate to reviews to find a document ID
-    await page.getByRole('button', { name: 'Reviews' }).click();
-    await page.waitForURL(/\/reviews/);
+    // Navigate to review queue to find a document ID
+    await page.goto('/reviews');
+    await expect(page.getByText('Review Queue')).toBeVisible();
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow.getByRole('button', { name: 'Review' })).toBeVisible({ timeout: 10000 });
+    await firstRow.getByRole('button', { name: 'Review' }).click();
+    await expect(page.getByText('Document Info')).toBeVisible({ timeout: 5000 });
 
-    const reviewLink = page.getByRole('link', { name: 'Review' }).first();
-    const href = await reviewLink.getAttribute('href');
-    expect(href).toBeTruthy();
-    const documentId = href!.split('/').pop();
+    const documentId = page.url().split('/reviews/')[1];
 
     // Call the similar-cases API endpoint directly
     const response = await request.get(`/api/reviews/${documentId}/similar-cases`, {
@@ -67,13 +71,15 @@ test.describe('Similar cases (E2E)', () => {
   });
 
   test('similar cases panel renders seeded data without errors', async ({ page }) => {
-    await page.getByRole('button', { name: 'Reviews' }).click();
-    await page.waitForURL(/\/reviews/);
+    await page.goto('/reviews');
+    await expect(page.getByText('Review Queue')).toBeVisible();
 
-    const reviewLink = page.getByRole('link', { name: 'Review' }).first();
-    await reviewLink.click();
-    await page.waitForURL(/\/reviews\/[a-f0-9-]+/);
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow.getByRole('button', { name: 'Review' })).toBeVisible({ timeout: 10000 });
+    await firstRow.getByRole('button', { name: 'Review' }).click();
+    await expect(page.getByText('Document Info')).toBeVisible({ timeout: 5000 });
 
+    // Expand similar cases panel
     await page.getByTestId('similar-cases-panel').click();
 
     // Wait for results to load
