@@ -109,6 +109,8 @@ React 19 + TypeScript + Vite SPA. MUI v6 for UI, React Query v5 for server state
 
 **Form templates.** `FormTemplate` aggregate with `TemplateField` value objects stored as JSON column via `OwnsMany(...).ToJson()`. Four template types: ChildWelfare, AdultProtective, HousingAssistance, MentalHealthReferral. Six field types: Text, Date, Number, Select, Checkbox, TextArea. Select fields store options as JSON string array. Shared DTO mapping in `Api.Application.Mappings.FormTemplateMappings`.
 
+**Contract-first API design.** YAML spec files in `contracts/` are the source of truth for all service boundaries. `api-service.openapi.yaml` and `rag-service.openapi.yaml` define REST endpoints (OpenAPI 3.0.3). `messaging.asyncapi.yaml` defines MassTransit events (AsyncAPI 2.6.0). Tests validate that runtime output matches the specs; any drift fails the build. When adding or changing endpoints or events, update the spec file first, then implement.
+
 ---
 
 ## Project Conventions
