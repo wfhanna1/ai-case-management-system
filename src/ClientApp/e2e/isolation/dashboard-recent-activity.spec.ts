@@ -43,6 +43,51 @@ workerTest.describe('Dashboard recent activity (isolation)', () => {
     await expect(workerPage.getByText('No recent activity yet.')).toBeVisible();
   });
 
+  workerTest('re-fetches data on navigation back to dashboard', async ({ workerPage }) => {
+    // First visit: show initial activity
+    const initialActivities = [
+      createRecentActivityDto({ action: 'ExtractionCompleted', timestamp: '2026-03-01T11:00:00Z' }),
+    ];
+    await mockGetRecentActivity(workerPage, initialActivities);
+
+    // Mock documents page so navigation works
+    await workerPage.route('**/api/documents', route => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(apiOk([])),
+        });
+      }
+      return route.continue();
+    });
+
+    await workerPage.goto('/dashboard');
+    await expect(workerPage.getByText('ExtractionCompleted')).toBeVisible();
+
+    // Navigate away to documents page
+    await workerPage.goto('/documents');
+    await expect(workerPage.getByRole('heading', { name: 'Documents' })).toBeVisible();
+
+    // Update mock to return new data
+    let fetchCount = 0;
+    await workerPage.route('**/api/documents/recent-activity*', route => {
+      fetchCount++;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(apiOk([
+          createRecentActivityDto({ action: 'ReviewFinalized', timestamp: '2026-03-01T12:00:00Z' }),
+        ])),
+      });
+    });
+
+    // Navigate back to dashboard
+    await workerPage.goto('/dashboard');
+    await expect(workerPage.getByText('ReviewFinalized')).toBeVisible();
+    expect(fetchCount).toBeGreaterThan(0);
+  });
+
   workerTest('shows activity section even when API fails', async ({ workerPage }) => {
     await workerPage.route('**/api/documents/recent-activity*', route =>
       route.fulfill({
