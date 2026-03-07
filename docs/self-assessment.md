@@ -12,7 +12,7 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 - **Field extraction** using regex key-value pattern matching on OCR output text
 - **Review workflow** with role-based access: start review, correct extracted fields, finalize with full audit trail
 - **Case assignment** that auto-groups documents by subject name, with priority resolution (Subject > Client > any Name field)
-- **Vector embeddings** stored in Qdrant with tenant-isolated similarity search (mock embedding adapter; Qdrant is real)
+- **Vector embeddings** stored in Qdrant with tenant-isolated similarity search using real semantic embeddings (SmartComponents bge-micro-v2 model)
 
 ### Architecture
 - **Three microservices** (API, OCR Worker, RAG Service) communicating via RabbitMQ/MassTransit
@@ -49,9 +49,9 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 - **Health checks** on every service, used by Docker Compose for dependency ordering
 
 ### Testing
-- **506 .NET tests** across 8 test projects (unit, integration)
-- **100 Playwright isolation tests** (real browser, mocked API) across 20 spec files
-- **50 Playwright E2E tests** (real browser, full running stack) across 14 spec files
+- **516 .NET tests** across 9 test projects (unit, integration)
+- **102 Playwright isolation tests** (real browser, mocked API) across 20 spec files
+- **53 Playwright E2E tests** (real browser, full running stack) across 15 spec files
 - **OpenAPI and AsyncAPI contract drift tests** providing bidirectional comparison of runtime output against checked-in YAML specs
 - **Hand-written test doubles** (no mocking frameworks) for all port interfaces
 

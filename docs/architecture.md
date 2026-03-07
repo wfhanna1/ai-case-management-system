@@ -372,7 +372,13 @@ The API service calls the RAG service's `POST /api/similar-by-text` endpoint, wh
 
 ### Data Seeding
 
-In development, `RagDataSeeder` seeds 200+ synthetic case embeddings across all four template types and both demo tenants. This provides realistic similarity search results for development and demo purposes.
+In development, `RagDataSeeder` seeds 205 synthetic case embeddings across all four template types and both demo tenants using the configured embedding adapter. With the default `local` provider, these are real semantic embeddings that produce meaningful similarity search results.
+
+The seeder checks whether Qdrant already has data before running. To re-seed (for example, after switching from mock to real embeddings), wipe all volumes and rebuild:
+
+```bash
+docker compose down -v && docker compose up --build
+```
 
 ---
 
