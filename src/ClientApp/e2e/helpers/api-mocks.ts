@@ -62,6 +62,15 @@ export async function mockGetReviewDocument(page: Page, doc: ReviewDocumentDto) 
   await page.route(`**/api/reviews/${doc.id}/similar-cases`, route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: [] })) })
   );
+  // Default mock for document file preview (1x1 transparent PNG).
+  // Tests that need specific file behavior should call mockGetDocumentFile/mockGetDocumentFileError after this.
+  await page.route(`**/api/documents/${doc.id}/file`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB', 'base64'),
+    })
+  );
   await page.route(`**/api/reviews/${doc.id}`, route => {
     if (route.request().url().includes('/audit') || route.request().url().includes('/start') ||
         route.request().url().includes('/correct-field') || route.request().url().includes('/finalize') ||
@@ -167,6 +176,27 @@ export async function mockGetCase(page: Page, detail: CaseDetailDto) {
 export async function mockSearchCases(page: Page, result: SearchCasesResultDto) {
   await page.route('**/api/cases/search*', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(result)) })
+  );
+}
+
+// Document file blob
+export async function mockGetDocumentFile(page: Page, docId: string, contentType = 'image/png') {
+  // Minimal 1x1 PNG (67 bytes) for image tests; a tiny PDF header for PDF tests.
+  const pngBytes = Buffer.from(
+    '89504e470d0a1a0a0000000d49484452000000010000000108020000009001' +
+    '2e0000000c4944415408d76360f8cfc00000000200017221bc330000000049454e44ae426082',
+    'hex'
+  );
+  const pdfBytes = Buffer.from('%PDF-1.4\n%%EOF\n');
+  const body = contentType === 'application/pdf' ? pdfBytes : pngBytes;
+  await page.route(`**/api/documents/${docId}/file`, route =>
+    route.fulfill({ status: 200, contentType, body })
+  );
+}
+
+export async function mockGetDocumentFileError(page: Page, docId: string, status = 404) {
+  await page.route(`**/api/documents/${docId}/file`, route =>
+    route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ data: null, error: { code: 'NOT_FOUND', message: 'File not found' } }) })
   );
 }
 

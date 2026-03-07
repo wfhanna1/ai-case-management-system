@@ -32,17 +32,17 @@ interface NavItem {
   path: string;
   icon: React.ReactNode;
   testId: string;
-  reviewerOnly?: boolean;
+  roles?: string[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, testId: 'mobile-nav-dashboard' },
-  { label: 'Upload', path: '/upload', icon: <CloudUploadIcon />, testId: 'mobile-nav-upload' },
+  { label: 'Upload', path: '/upload', icon: <CloudUploadIcon />, testId: 'mobile-nav-upload', roles: ['IntakeWorker', 'Admin'] },
   { label: 'Documents', path: '/documents', icon: <FolderIcon />, testId: 'mobile-nav-documents' },
   { label: 'Templates', path: '/templates', icon: <DescriptionIcon />, testId: 'mobile-nav-templates' },
   { label: 'Search', path: '/search', icon: <SearchIcon />, testId: 'mobile-nav-search' },
   { label: 'Cases', path: '/cases', icon: <WorkIcon />, testId: 'mobile-nav-cases' },
-  { label: 'Reviews', path: '/reviews', icon: <RateReviewIcon />, testId: 'mobile-nav-reviews', reviewerOnly: true },
+  { label: 'Reviews', path: '/reviews', icon: <RateReviewIcon />, testId: 'mobile-nav-reviews', roles: ['Reviewer', 'Admin'] },
 ];
 
 function MainLayout() {
@@ -62,7 +62,7 @@ function MainLayout() {
   };
 
   const visibleNavItems = NAV_ITEMS.filter(
-    item => !item.reviewerOnly || user?.roles.includes('Reviewer') || user?.roles.includes('Admin')
+    item => !item.roles || item.roles.some(role => user?.roles.includes(role))
   );
 
   return (
@@ -87,29 +87,17 @@ function MainLayout() {
 
               {/* Desktop inline nav */}
               <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
-                <Button color="inherit" onClick={() => navigate('/dashboard')} sx={{ mr: 1 }}>
-                  Dashboard
-                </Button>
-                <Button color="inherit" onClick={() => navigate('/upload')} sx={{ mr: 1 }} startIcon={<CloudUploadIcon />}>
-                  Upload
-                </Button>
-                <Button color="inherit" onClick={() => navigate('/documents')} sx={{ mr: 1 }} startIcon={<FolderIcon />}>
-                  Documents
-                </Button>
-                <Button color="inherit" onClick={() => navigate('/templates')} sx={{ mr: 1 }}>
-                  Templates
-                </Button>
-                <Button color="inherit" onClick={() => navigate('/search')} sx={{ mr: 1 }} startIcon={<SearchIcon />}>
-                  Search
-                </Button>
-                <Button color="inherit" onClick={() => navigate('/cases')} sx={{ mr: 1 }} startIcon={<WorkIcon />}>
-                  Cases
-                </Button>
-                {(user.roles.includes('Reviewer') || user.roles.includes('Admin')) && (
-                  <Button color="inherit" onClick={() => navigate('/reviews')} sx={{ mr: 2 }} startIcon={<RateReviewIcon />}>
-                    Reviews
+                {visibleNavItems.map(item => (
+                  <Button
+                    key={item.path}
+                    color="inherit"
+                    onClick={() => navigate(item.path)}
+                    sx={{ mr: 1 }}
+                    startIcon={item.icon}
+                  >
+                    {item.label}
                   </Button>
-                )}
+                ))}
                 <Typography variant="body2" sx={{ mr: 1 }}>
                   {user.email}
                 </Typography>

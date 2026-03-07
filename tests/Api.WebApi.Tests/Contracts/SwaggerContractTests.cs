@@ -38,6 +38,7 @@ public sealed class SwaggerContractTests : IClassFixture<SwaggerContractTests.Te
     [InlineData("/api/Documents", "post")]
     [InlineData("/api/Documents", "get")]
     [InlineData("/api/Documents/{id}", "get")]
+    [InlineData("/api/Documents/{id}/file", "get")]
     [InlineData("/api/auth/login", "post")]
     [InlineData("/api/auth/register", "post")]
     [InlineData("/api/form-templates", "post")]

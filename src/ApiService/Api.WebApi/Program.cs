@@ -221,6 +221,7 @@ builder.Services.AddTransient<ITokenService, JwtTokenService>();
 // ---------------------------------------------------------------------------
 builder.Services.AddTransient<SubmitDocumentHandler>();
 builder.Services.AddTransient<GetDocumentByIdHandler>();
+builder.Services.AddTransient<DownloadDocumentHandler>();
 builder.Services.AddTransient<ListDocumentsByTenantHandler>();
 builder.Services.AddTransient<RegisterUserHandler>();
 builder.Services.AddTransient<LoginHandler>();

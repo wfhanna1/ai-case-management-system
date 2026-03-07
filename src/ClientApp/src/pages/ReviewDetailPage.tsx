@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
@@ -44,6 +44,7 @@ import {
   finalizeReview,
   getAuditTrail,
   getSimilarCases,
+  getDocumentFileBlob,
   type ExtractedFieldDto,
   type AuditLogEntryDto,
   type SimilarCaseDto,
@@ -93,6 +94,23 @@ function ReviewDetailPage() {
     queryFn: () => getSimilarCases(id!),
     enabled: !!id,
   });
+
+  const { data: fileBlob, isError: fileError } = useQuery({
+    queryKey: ['document-file', id],
+    queryFn: () => getDocumentFileBlob(id!),
+    enabled: !!id,
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!fileBlob) return;
+    const url = URL.createObjectURL(fileBlob);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [fileBlob]);
 
   const startMutation = useMutation({
     mutationFn: () => startReview(id!),
@@ -247,6 +265,37 @@ function ReviewDetailPage() {
                 </TableRow>
               </TableBody>
             </Table>
+          </Paper>
+
+          <Paper elevation={2} sx={{ p: 2, mt: 2 }} data-testid="document-preview">
+            <Typography variant="h6" gutterBottom>
+              Document Preview
+            </Typography>
+            {previewUrl ? (
+              fileBlob?.type === 'application/pdf' ? (
+                <Box
+                  component="iframe"
+                  src={previewUrl}
+                  sx={{ width: '100%', height: 600, border: 'none' }}
+                  title="Document preview"
+                />
+              ) : (
+                <Box
+                  component="img"
+                  src={previewUrl}
+                  alt={doc.originalFileName}
+                  sx={{ width: '100%', maxHeight: 600, objectFit: 'contain' }}
+                />
+              )
+            ) : fileError ? (
+              <Alert severity="warning">
+                Unable to load document preview. The file may not be available.
+              </Alert>
+            ) : (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
           </Paper>
         </Grid>
 
