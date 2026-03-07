@@ -31,19 +31,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
         '400':
           description: Email already in use or registration failed.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
         '422':
           description: Request body failed validation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
 
   /api/auth/login:
     post:
@@ -63,19 +63,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
         '401':
           description: Invalid credentials.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
         '422':
           description: Request body failed validation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
 
   /api/auth/refresh:
     post:
@@ -95,19 +95,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
         '401':
           description: Refresh token is invalid or expired.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
         '422':
           description: Request body failed validation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuthResponse'
+                $ref: '#/components/schemas/AuthResponseApiResponse'
 
   # ── Documents ───────────────────────────────────────────────────────────────
   /api/Documents:
@@ -133,13 +133,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDto'
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
         '400':
           description: File is missing, empty, or has an unsupported content type.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDto'
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
         '401':
           description: Not authenticated.
         '403':
@@ -165,7 +165,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDtoList'
+                $ref: '#/components/schemas/DocumentDtoIReadOnlyListApiResponse'
         '401':
           description: Not authenticated.
         '500':
@@ -173,7 +173,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDtoList'
+                $ref: '#/components/schemas/DocumentDtoIReadOnlyListApiResponse'
 
   /api/Documents/{id}:
     get:
@@ -193,7 +193,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDto'
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
         '401':
           description: Not authenticated.
         '404':
@@ -201,13 +201,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDto'
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDocumentDto'
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
 
   /api/Documents/search:
     get:
@@ -258,7 +258,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSearchDocumentsResultDto'
+                $ref: '#/components/schemas/SearchDocumentsResultDtoApiResponse'
         '401':
           description: Not authenticated.
         '500':
@@ -266,7 +266,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSearchDocumentsResultDto'
+                $ref: '#/components/schemas/SearchDocumentsResultDtoApiResponse'
 
   /api/Documents/stats:
     get:
@@ -279,7 +279,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDashboardStatsDto'
+                $ref: '#/components/schemas/DashboardStatsDtoApiResponse'
         '401':
           description: Not authenticated.
         '500':
@@ -287,7 +287,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfDashboardStatsDto'
+                $ref: '#/components/schemas/DashboardStatsDtoApiResponse'
 
   # ── Cases ───────────────────────────────────────────────────────────────────
   /api/Cases:
@@ -312,7 +312,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSearchCasesResultDto'
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
         '401':
           description: Not authenticated.
         '500':
@@ -320,7 +320,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSearchCasesResultDto'
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
 
   /api/Cases/{id}:
     get:
@@ -340,7 +340,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfCaseDetailDto'
+                $ref: '#/components/schemas/CaseDetailDtoApiResponse'
         '401':
           description: Not authenticated.
         '404':
@@ -348,13 +348,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfCaseDetailDto'
+                $ref: '#/components/schemas/CaseDetailDtoApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfCaseDetailDto'
+                $ref: '#/components/schemas/CaseDetailDtoApiResponse'
 
   /api/Cases/search:
     get:
@@ -400,7 +400,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSearchCasesResultDto'
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
         '401':
           description: Not authenticated.
         '500':
@@ -408,7 +408,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSearchCasesResultDto'
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
 
   # ── Form Templates ─────────────────────────────────────────────────────────
   /api/form-templates:
@@ -428,13 +428,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDto'
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
         '400':
           description: Template creation failed (e.g. duplicate name).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDto'
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
         '401':
           description: Not authenticated.
         '403':
@@ -444,7 +444,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDto'
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
     get:
       tags: [FormTemplates]
       summary: Lists all form templates for the authenticated tenant.
@@ -455,7 +455,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDtoList'
+                $ref: '#/components/schemas/FormTemplateDtoIReadOnlyListApiResponse'
         '401':
           description: Not authenticated.
         '500':
@@ -463,7 +463,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDtoList'
+                $ref: '#/components/schemas/FormTemplateDtoIReadOnlyListApiResponse'
 
   /api/form-templates/{id}:
     get:
@@ -483,7 +483,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDto'
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
         '401':
           description: Not authenticated.
         '404':
@@ -491,13 +491,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDto'
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfFormTemplateDto'
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
 
   # ── Reviews ─────────────────────────────────────────────────────────────────
   /api/reviews/pending:
@@ -522,7 +522,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfReviewDocumentDtoList'
+                $ref: '#/components/schemas/ReviewDocumentDtoIReadOnlyListApiResponse'
         '401':
           description: Not authenticated.
         '403':
@@ -532,7 +532,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfReviewDocumentDtoList'
+                $ref: '#/components/schemas/ReviewDocumentDtoIReadOnlyListApiResponse'
 
   /api/reviews/{documentId}:
     get:
@@ -552,7 +552,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfReviewDocumentDto'
+                $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
         '401':
           description: Not authenticated.
         '403':
@@ -562,13 +562,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfReviewDocumentDto'
+                $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfReviewDocumentDto'
+                $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
 
   /api/reviews/{documentId}/start:
     post:
@@ -588,13 +588,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '401':
           description: Not authenticated or user identity missing from token.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '403':
           description: Caller does not have the Reviewer or Admin role.
         '404':
@@ -602,19 +602,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '409':
           description: Document is not in a state that allows starting review.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
 
   /api/reviews/{documentId}/correct-field:
     post:
@@ -640,13 +640,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '401':
           description: Not authenticated or user identity missing from token.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '403':
           description: Caller does not have the Reviewer or Admin role.
         '404':
@@ -654,25 +654,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '409':
           description: Document is not in a state that allows field correction.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '422':
           description: Request body failed validation.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
 
   /api/reviews/{documentId}/finalize:
     post:
@@ -692,13 +692,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '401':
           description: Not authenticated or user identity missing from token.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '403':
           description: Caller does not have the Reviewer or Admin role.
         '404':
@@ -706,19 +706,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '409':
           description: Document is not in a state that allows finalization.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
         '500':
           description: An unexpected error occurred.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfEmptyResponse'
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
 
   /api/reviews/{documentId}/similar-cases:
     get:
@@ -738,7 +738,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSimilarCasesResultDto'
+                $ref: '#/components/schemas/SimilarCasesResultDtoApiResponse'
         '401':
           description: Not authenticated.
         '403':
@@ -748,7 +748,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfSimilarCasesResultDto'
+                $ref: '#/components/schemas/SimilarCasesResultDtoApiResponse'
 
   /api/reviews/{documentId}/audit:
     get:
@@ -768,7 +768,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuditLogEntryDtoList'
+                $ref: '#/components/schemas/AuditLogEntryDtoIReadOnlyListApiResponse'
         '401':
           description: Not authenticated.
         '403':
@@ -778,7 +778,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseOfAuditLogEntryDtoList'
+                $ref: '#/components/schemas/AuditLogEntryDtoIReadOnlyListApiResponse'
 
 components:
   securitySchemes:
@@ -810,6 +810,27 @@ components:
 
     EmptyResponse:
       type: object
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          format: int32
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+      additionalProperties: {}
 
     # ── Auth schemas ──────────────────────────────────────────────────────────
     RegisterUserRequest:
@@ -1228,7 +1249,7 @@ components:
         - items
 
     # ── Typed ApiResponse wrappers ────────────────────────────────────────────
-    ApiResponseOfAuthResponse:
+    AuthResponseApiResponse:
       type: object
       properties:
         data:
@@ -1236,7 +1257,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfDocumentDto:
+    DocumentDtoApiResponse:
       type: object
       properties:
         data:
@@ -1244,7 +1265,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfDocumentDtoList:
+    DocumentDtoIReadOnlyListApiResponse:
       type: object
       properties:
         data:
@@ -1255,7 +1276,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfSearchDocumentsResultDto:
+    SearchDocumentsResultDtoApiResponse:
       type: object
       properties:
         data:
@@ -1263,7 +1284,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfDashboardStatsDto:
+    DashboardStatsDtoApiResponse:
       type: object
       properties:
         data:
@@ -1271,7 +1292,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfSearchCasesResultDto:
+    SearchCasesResultDtoApiResponse:
       type: object
       properties:
         data:
@@ -1279,7 +1300,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfCaseDetailDto:
+    CaseDetailDtoApiResponse:
       type: object
       properties:
         data:
@@ -1287,7 +1308,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfFormTemplateDto:
+    FormTemplateDtoApiResponse:
       type: object
       properties:
         data:
@@ -1295,7 +1316,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfFormTemplateDtoList:
+    FormTemplateDtoIReadOnlyListApiResponse:
       type: object
       properties:
         data:
@@ -1306,7 +1327,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfReviewDocumentDto:
+    ReviewDocumentDtoApiResponse:
       type: object
       properties:
         data:
@@ -1314,7 +1335,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfReviewDocumentDtoList:
+    ReviewDocumentDtoIReadOnlyListApiResponse:
       type: object
       properties:
         data:
@@ -1325,7 +1346,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfEmptyResponse:
+    EmptyResponseApiResponse:
       type: object
       properties:
         data:
@@ -1333,7 +1354,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfSimilarCasesResultDto:
+    SimilarCasesResultDtoApiResponse:
       type: object
       properties:
         data:
@@ -1341,7 +1362,7 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
-    ApiResponseOfAuditLogEntryDtoList:
+    AuditLogEntryDtoIReadOnlyListApiResponse:
       type: object
       properties:
         data:

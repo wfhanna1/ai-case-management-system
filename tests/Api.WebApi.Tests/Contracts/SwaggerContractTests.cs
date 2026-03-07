@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SharedKernel;
+using YamlDotNet.Serialization;
 
 namespace Api.WebApi.Tests.Contracts;
 
@@ -75,6 +76,99 @@ public sealed class SwaggerContractTests : IClassFixture<SwaggerContractTests.Te
 
         Assert.True(schemas.TryGetProperty(schemaName, out _),
             $"Missing schema: {schemaName}");
+    }
+
+    private static readonly HashSet<string> HttpMethods = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "get", "put", "post", "delete", "options", "head", "patch", "trace"
+    };
+
+    [Fact]
+    public async Task Swagger_Matches_Contract_Spec()
+    {
+        // Load the checked-in OpenAPI spec
+        var solutionRoot = GetSolutionRoot();
+        var specPath = Path.Combine(solutionRoot, "contracts", "api-service.openapi.yaml");
+        var yamlContent = await File.ReadAllTextAsync(specPath);
+        var deserializer = new DeserializerBuilder().Build();
+        var spec = deserializer.Deserialize<Dictionary<object, object>>(yamlContent);
+
+        // Fetch the runtime Swagger output
+        var response = await _client.GetAsync("/swagger/v1/swagger.json");
+        response.EnsureSuccessStatusCode();
+        var swaggerJson = await response.Content.ReadAsStringAsync();
+        var swaggerDoc = JsonDocument.Parse(swaggerJson);
+        var swaggerPaths = swaggerDoc.RootElement.GetProperty("paths");
+        var swaggerSchemas = swaggerDoc.RootElement
+            .GetProperty("components")
+            .GetProperty("schemas");
+
+        // Build sets of path+method from spec
+        var specPaths = (Dictionary<object, object>)spec["paths"];
+        var specEndpoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pathEntry in specPaths)
+        {
+            var path = (string)pathEntry.Key;
+            var methods = (Dictionary<object, object>)pathEntry.Value;
+            foreach (var methodKey in methods.Keys)
+            {
+                var method = (string)methodKey;
+                if (!HttpMethods.Contains(method))
+                    continue;
+                specEndpoints.Add($"{method.ToUpperInvariant()} {path}");
+            }
+        }
+
+        // Build sets of path+method from Swagger output
+        var swaggerEndpoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pathProp in swaggerPaths.EnumerateObject())
+        {
+            foreach (var methodProp in pathProp.Value.EnumerateObject())
+            {
+                if (!HttpMethods.Contains(methodProp.Name))
+                    continue;
+                swaggerEndpoints.Add($"{methodProp.Name.ToUpperInvariant()} {pathProp.Name}");
+            }
+        }
+
+        // Every spec endpoint must exist in Swagger
+        var missingFromSwagger = specEndpoints.Except(swaggerEndpoints, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.True(missingFromSwagger.Count == 0,
+            $"Spec defines endpoints missing from Swagger output:\n  {string.Join("\n  ", missingFromSwagger)}");
+
+        // Every Swagger endpoint must exist in spec (catches undocumented endpoints)
+        var missingFromSpec = swaggerEndpoints.Except(specEndpoints, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.True(missingFromSpec.Count == 0,
+            $"Swagger output contains endpoints not in spec:\n  {string.Join("\n  ", missingFromSpec)}");
+
+        // Validate schema names
+        var specComponents = (Dictionary<object, object>)spec["components"];
+        var specSchemas = (Dictionary<object, object>)specComponents["schemas"];
+        var specSchemaNames = specSchemas.Keys.Cast<string>().ToHashSet();
+
+        var swaggerSchemaNames = new HashSet<string>();
+        foreach (var schemaProp in swaggerSchemas.EnumerateObject())
+        {
+            swaggerSchemaNames.Add(schemaProp.Name);
+        }
+
+        var schemasNotInSwagger = specSchemaNames.Except(swaggerSchemaNames).ToList();
+        Assert.True(schemasNotInSwagger.Count == 0,
+            $"Spec defines schemas missing from Swagger output:\n  {string.Join("\n  ", schemasNotInSwagger)}");
+    }
+
+    private static string GetSolutionRoot()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir, "IntakeDocumentProcessor.sln")))
+                return dir;
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+
+        throw new InvalidOperationException(
+            "Could not find IntakeDocumentProcessor.sln walking up from " + AppContext.BaseDirectory);
     }
 
     /// <summary>
