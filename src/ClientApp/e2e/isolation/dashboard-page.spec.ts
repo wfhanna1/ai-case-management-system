@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { workerTest } from '../fixtures/auth.fixture';
+import { apiOk } from '../fixtures/mock-data';
 
 test.describe('Dashboard page (isolation)', () => {
   test('redirects to login when not authenticated', async ({ page }) => {
@@ -13,6 +14,18 @@ test.describe('Dashboard page (isolation)', () => {
   });
 
   workerTest('shows stat cards', async ({ workerPage }) => {
+    await workerPage.route('**/api/documents/stats', route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(apiOk({
+          totalCases: 10,
+          pendingReview: 2,
+          processedToday: 1,
+          averageProcessingTime: '5m',
+        })),
+      })
+    );
     await workerPage.goto('/dashboard');
     await expect(workerPage.getByText('Total Cases')).toBeVisible();
     await expect(workerPage.getByText('Pending Review')).toBeVisible();

@@ -90,8 +90,8 @@ public sealed class SearchCasesRequestValidatorTests
     [Fact]
     public void From_before_To_passes()
     {
-        var from = DateTimeOffset.UtcNow;
-        var to = from.AddDays(1);
+        var from = DateTimeOffset.UtcNow.AddDays(-2);
+        var to = DateTimeOffset.UtcNow.AddDays(-1);
         var request = new SearchCasesRequest(null, null, from, to);
         var result = _validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
@@ -153,5 +153,25 @@ public sealed class SearchCasesRequestValidatorTests
         var request = new SearchCasesRequest("search term", "Completed", from, to, 2, 50);
         var result = _validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Future_From_date_fails()
+    {
+        var futureDate = DateTimeOffset.UtcNow.AddDays(1);
+        var request = new SearchCasesRequest(null, null, futureDate, null);
+        var result = _validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.From)
+              .WithErrorMessage("'From' date cannot be in the future.");
+    }
+
+    [Fact]
+    public void Future_To_date_fails()
+    {
+        var futureDate = DateTimeOffset.UtcNow.AddDays(1);
+        var request = new SearchCasesRequest(null, null, null, futureDate);
+        var result = _validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.To)
+              .WithErrorMessage("'To' date cannot be in the future.");
     }
 }

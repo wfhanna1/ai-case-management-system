@@ -627,6 +627,10 @@ public sealed class ReviewControllerTests
             string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default)
             => Task.FromResult(Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Success(
                 (Array.Empty<IntakeDocument>() as IReadOnlyList<IntakeDocument>, 0)));
+
+        public Task<Result<(int PendingReview, int ProcessedToday, TimeSpan AverageProcessingTime)>> GetStatsAsync(
+            TenantId tenantId, CancellationToken ct = default)
+            => Task.FromResult(Result<(int, int, TimeSpan)>.Success((0, 0, TimeSpan.Zero)));
     }
 
     private sealed class StubAuditLogRepository : IAuditLogRepository

@@ -66,6 +66,67 @@ workerTest.describe('SearchPage', () => {
     await expect(page.getByTestId('search-pagination')).toBeVisible();
   });
 
+  workerTest('clicking search result navigates to document detail page', async ({ workerPage: page }) => {
+    const docId = '11111111-1111-1111-1111-111111111111';
+    const docs = [
+      createDocumentDto({ id: docId, originalFileName: 'test-doc.pdf', status: 'PendingReview' }),
+    ];
+    const result = createSearchDocumentsResultDto(docs, 1);
+    await mockSearchDocuments(page, result);
+
+    // Mock the review endpoint so ReviewDetailPage loads after navigation
+    await page.route(`**/api/reviews/${docId}/**`, route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: null, error: null }) })
+    );
+    await page.route(`**/api/reviews/${docId}`, route =>
+      route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ data: { id: docId, originalFileName: 'test-doc.pdf', status: 'PendingReview', submittedAt: '2026-03-01T10:00:00Z', processedAt: null, reviewedBy: null, reviewedAt: null, extractedFields: [] }, error: null }),
+      })
+    );
+
+    await page.goto('/search');
+    await page.getByTestId('search-btn').click();
+    await expect(page.getByTestId(`search-result-${docId}`)).toBeVisible();
+    await page.getByTestId(`search-result-${docId}`).click();
+
+    await expect(page).toHaveURL(/\/documents\//, { timeout: 5000 });
+  });
+
+  workerTest('date search sends end-of-day for To date', async ({ workerPage: page }) => {
+    let capturedUrl = '';
+    await page.route('**/api/documents/search*', route => {
+      capturedUrl = route.request().url();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { items: [], totalCount: 0, page: 1, pageSize: 20 }, error: null }),
+      });
+    });
+
+    await page.goto('/search');
+    await page.getByTestId('search-to').locator('input').fill('2026-03-06');
+    await page.getByTestId('search-btn').click();
+
+    await expect(async () => {
+      expect(capturedUrl).toBeTruthy();
+    }).toPass({ timeout: 3000 });
+
+    // The To date should be end of day, not midnight
+    expect(capturedUrl).toContain('to=2026-03-06T23:59:59');
+  });
+
+  workerTest('date inputs disallow future dates', async ({ workerPage: page }) => {
+    await page.goto('/search');
+    const today = new Date().toISOString().split('T')[0];
+
+    const fromMax = await page.getByTestId('search-from').locator('input').getAttribute('max');
+    const toMax = await page.getByTestId('search-to').locator('input').getAttribute('max');
+
+    expect(fromMax).toBe(today);
+    expect(toMax).toBe(today);
+  });
+
   workerTest('shows error alert on API failure', async ({ workerPage: page }) => {
     await page.route('**/api/documents/search*', route =>
       route.fulfill({

@@ -51,6 +51,24 @@ public sealed class CorrectFieldHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_corrected_value_persists_on_document()
+    {
+        var tenantId = TenantId.New();
+        var reviewerId = UserId.New();
+        var doc = CreateInReviewDocument(tenantId);
+        _documentRepo.Document = doc;
+
+        var result = await _handler.HandleAsync(
+            doc.Id.Value, tenantId.Value, reviewerId.Value, "PatientName", "Jane Doe",
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var field = doc.ExtractedFields.Single(f => f.Name == "PatientName");
+        Assert.Equal("Jane Doe", field.CorrectedValue);
+        Assert.Equal("John Doe", field.Value);
+    }
+
+    [Fact]
     public async Task HandleAsync_document_not_found_returns_NOT_FOUND()
     {
         var tenantId = TenantId.New();
@@ -149,6 +167,10 @@ public sealed class CorrectFieldHandlerTests
             TenantId tenantId, string? fileNameContains, DocumentStatus? status,
             DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore,
             string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Result<(int PendingReview, int ProcessedToday, TimeSpan AverageProcessingTime)>> GetStatsAsync(
+            TenantId tenantId, CancellationToken ct = default)
             => throw new NotImplementedException();
     }
 

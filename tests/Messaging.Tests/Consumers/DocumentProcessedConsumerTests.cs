@@ -180,6 +180,9 @@ public sealed class DocumentProcessedConsumerTests
 
         public Task<Result<Unit>> UpdateAsync(Case @case, CancellationToken ct = default)
             => Task.FromResult(Result<Unit>.Success(Unit.Value));
+
+        public Task<Result<int>> CountByTenantAsync(TenantId tenantId, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class StubAuditLogRepository : IAuditLogRepository

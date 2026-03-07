@@ -63,5 +63,6 @@ public sealed class GetCaseByIdHandlerTests
         public Task<Result<(IReadOnlyList<Case> Items, int TotalCount)>> SearchAsync(TenantId tenantId, string? query, DocumentStatus? status, DateTimeOffset? from, DateTimeOffset? to, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> SaveAsync(Case @case, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> UpdateAsync(Case @case, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Result<int>> CountByTenantAsync(TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }

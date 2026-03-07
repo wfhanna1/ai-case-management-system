@@ -30,6 +30,14 @@ public sealed class SearchCasesRequestValidator : AbstractValidator<SearchCasesR
                 .WithMessage("Status must be a valid document status.");
         });
 
+        RuleFor(x => x.From)
+            .Must(d => d is null || d <= DateTimeOffset.UtcNow)
+            .WithMessage("'From' date cannot be in the future.");
+
+        RuleFor(x => x.To)
+            .Must(d => d is null || d <= DateTimeOffset.UtcNow)
+            .WithMessage("'To' date cannot be in the future.");
+
         RuleFor(x => x)
             .Must(x => x.From is null || x.To is null || x.From <= x.To)
             .WithMessage("'From' date must not be after 'To' date.")

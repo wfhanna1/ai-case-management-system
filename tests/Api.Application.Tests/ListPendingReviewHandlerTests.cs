@@ -108,5 +108,9 @@ public sealed class ListPendingReviewHandlerTests
             DateTimeOffset? submittedAfter, DateTimeOffset? submittedBefore,
             string? extractedFieldContains, int page, int pageSize, CancellationToken ct = default)
             => throw new NotImplementedException();
+
+        public Task<Result<(int PendingReview, int ProcessedToday, TimeSpan AverageProcessingTime)>> GetStatsAsync(
+            TenantId tenantId, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

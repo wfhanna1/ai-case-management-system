@@ -73,6 +73,24 @@ export interface SearchDocumentsResult {
   pageSize: number;
 }
 
+export interface DashboardStatsDto {
+  totalCases: number;
+  pendingReview: number;
+  processedToday: number;
+  averageProcessingTime: string;
+}
+
+export async function getDashboardStats(): Promise<DashboardStatsDto> {
+  const res = await api.get<ApiResponse<DashboardStatsDto>>('/documents/stats');
+  if (res.data.error) {
+    throw new Error(res.data.error.message);
+  }
+  if (!res.data.data) {
+    throw new Error('No stats available');
+  }
+  return res.data.data;
+}
+
 export async function searchDocuments(params: SearchDocumentsParams): Promise<SearchDocumentsResult> {
   const res = await api.get<ApiResponse<SearchDocumentsResult>>('/documents/search', { params });
   if (res.data.error) {
