@@ -6,7 +6,6 @@ using OcrWorker.Host;
 using OcrWorker.Infrastructure.Messaging;
 using OcrWorker.Infrastructure.Ocr;
 using OcrWorker.Infrastructure.Storage;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using SharedKernel.Diagnostics;
@@ -35,22 +34,14 @@ builder.Services.AddOpenTelemetry()
         .AddMeter(serviceDiagnostics.ServiceName)
         .AddPrometheusExporter());
 
-builder.Logging.ClearProviders();
-builder.Logging.AddJsonConsole(options =>
-{
-    options.IncludeScopes = true;
-    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
-});
-builder.Logging.AddOpenTelemetry(logging =>
-{
-    logging.IncludeScopes = true;
-    logging.IncludeFormattedMessage = true;
-});
+builder.Logging.AddStructuredConsoleLogging();
 
 // ---------------------------------------------------------------------------
 // Health checks (12-factor: expose health for orchestrators)
 // ---------------------------------------------------------------------------
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "Missing required configuration: ConnectionStrings__DefaultConnection");
 var rabbitHost = builder.Configuration["RabbitMQ__Host"]
     ?? builder.Configuration["RabbitMQ:Host"] ?? "localhost";
 var rabbitUser = builder.Configuration["RabbitMQ__Username"]

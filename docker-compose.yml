@@ -1,3 +1,12 @@
+x-loki-logging: &loki-logging
+  driver: loki
+  options:
+    loki-url: "${LOKI_DRIVER_URL:-http://host.docker.internal:3100/loki/api/v1/push}"
+    loki-external-labels: "service_name={{.Name}}"
+    keep-file: "true"
+    loki-retries: "2"
+    loki-batch-size: "400"
+
 services:
 
   # ---------------------------------------------------------------------------
@@ -22,7 +31,7 @@ services:
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
       Storage__BasePath: /app/storage
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       OTEL_SERVICE_NAME: ApiService
     volumes:
       - api_storage:/app/storage
@@ -38,15 +47,8 @@ services:
       rabbitmq:
         condition: service_healthy
       tempo:
-        condition: service_started
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
-        loki-external-labels: "service_name={{.Name}}"
-        keep-file: "true"
-        loki-retries: "2"
-        loki-batch-size: "400"
+        condition: service_healthy
+    logging: *loki-logging
     restart: unless-stopped
 
   ocr-worker:
@@ -66,7 +68,7 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       OTEL_SERVICE_NAME: OcrWorkerService
       Ocr__Mode: tesseract
       Ocr__TessDataPath: /usr/share/tesseract-ocr/5/tessdata
@@ -85,15 +87,8 @@ services:
       rabbitmq:
         condition: service_healthy
       tempo:
-        condition: service_started
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
-        loki-external-labels: "service_name={{.Name}}"
-        keep-file: "true"
-        loki-retries: "2"
-        loki-batch-size: "400"
+        condition: service_healthy
+    logging: *loki-logging
     restart: unless-stopped
 
   rag-service:
@@ -116,7 +111,7 @@ services:
       Qdrant__Host: qdrant
       Qdrant__Port: ${QDRANT_GRPC_PORT:-6334}
       Qdrant__HttpPort: "6333"
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       OTEL_SERVICE_NAME: RagService
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]
@@ -130,15 +125,8 @@ services:
       rabbitmq:
         condition: service_healthy
       tempo:
-        condition: service_started
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
-        loki-external-labels: "service_name={{.Name}}"
-        keep-file: "true"
-        loki-retries: "2"
-        loki-batch-size: "400"
+        condition: service_healthy
+    logging: *loki-logging
     restart: unless-stopped
 
   frontend:
@@ -149,14 +137,7 @@ services:
       - "${FRONTEND_HOST_PORT:-3000}:80"
     depends_on:
       - api
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
-        loki-external-labels: "service_name={{.Name}}"
-        keep-file: "true"
-        loki-retries: "2"
-        loki-batch-size: "400"
+    logging: *loki-logging
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
@@ -254,17 +235,22 @@ services:
     image: grafana/tempo:2.7.2
     ports:
       - "${TEMPO_HOST_PORT:-3200}:3200"    # Tempo HTTP API
-      - "${TEMPO_OTLP_PORT:-4317}:4317"    # OTLP gRPC receiver
     volumes:
       - ./infra/tempo/tempo.yml:/etc/tempo/config.yaml:ro
       - tempo_data:/var/tempo
     command: ["-config.file=/etc/tempo/config.yaml"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
 
   loki:
     image: grafana/loki:3.4.3
     ports:
-      - "${LOKI_HOST_PORT:-3100}:3100"
+      - "127.0.0.1:${LOKI_HOST_PORT:-3100}:3100"
     volumes:
       - ./infra/loki/loki-config.yml:/etc/loki/config.yaml:ro
       - loki_data:/loki
