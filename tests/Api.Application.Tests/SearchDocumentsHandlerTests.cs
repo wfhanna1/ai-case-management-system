@@ -121,7 +121,7 @@ public sealed class SearchDocumentsHandlerTests
         public Task<Result<IntakeDocument?>> FindByIdUnfilteredAsync(DocumentId id, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<IReadOnlyList<IntakeDocument>>> ListByTenantAsync(TenantId tenantId, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusAsync(TenantId tenantId, DocumentStatus status, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> UpdateAsync(IntakeDocument document, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<Unit>> DeleteAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default) => throw new NotImplementedException();

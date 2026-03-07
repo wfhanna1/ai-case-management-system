@@ -26,6 +26,12 @@ public sealed record AuditLogEntryDto(
     string? PreviousValue,
     string? NewValue);
 
+public sealed record PendingReviewResultDto(
+    IReadOnlyList<ReviewDocumentDto> Items,
+    int TotalCount,
+    int Page,
+    int PageSize);
+
 public sealed record CorrectFieldRequest(
     string FieldName,
     string NewValue);

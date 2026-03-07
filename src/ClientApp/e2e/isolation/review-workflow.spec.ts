@@ -32,7 +32,7 @@ reviewerTest.describe('Review workflow', () => {
     );
 
     // Mock pending reviews endpoint for post-finalize navigation
-    await page.route('**/api/reviews/pending*', route =>
+    await page.route('**/api/reviews/pending**', route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: [], totalCount: 0 })) })
     );
 

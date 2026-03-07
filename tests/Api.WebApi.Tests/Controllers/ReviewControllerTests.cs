@@ -78,10 +78,11 @@ public sealed class ReviewControllerTests
         var result = await controller.ListPending(1, 20, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<IReadOnlyList<ReviewDocumentDto>>>(okResult.Value);
+        var response = Assert.IsType<ApiResponse<PendingReviewResultDto>>(okResult.Value);
         Assert.NotNull(response.Data);
-        Assert.Single(response.Data);
-        Assert.Equal(doc.OriginalFileName, response.Data[0].OriginalFileName);
+        Assert.Single(response.Data.Items);
+        Assert.Equal(1, response.Data.TotalCount);
+        Assert.Equal(doc.OriginalFileName, response.Data.Items[0].OriginalFileName);
     }
 
     [Fact]
@@ -96,7 +97,7 @@ public sealed class ReviewControllerTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(500, statusResult.StatusCode);
-        var response = Assert.IsType<ApiResponse<IReadOnlyList<ReviewDocumentDto>>>(statusResult.Value);
+        var response = Assert.IsType<ApiResponse<PendingReviewResultDto>>(statusResult.Value);
         Assert.Equal("DB_ERROR", response.Error!.Code);
     }
 
@@ -583,7 +584,7 @@ public sealed class ReviewControllerTests
     private sealed class StubDocumentRepository : IDocumentRepository
     {
         private Result<IntakeDocument?>? _findByIdResult;
-        private Result<IReadOnlyList<IntakeDocument>>? _listByStatusesResult;
+        private Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>? _listByStatusesResult;
 
         public void SetFindByIdResult(IntakeDocument? doc)
             => _findByIdResult = Result<IntakeDocument?>.Success(doc);
@@ -592,10 +593,10 @@ public sealed class ReviewControllerTests
             => _findByIdResult = Result<IntakeDocument?>.Failure(error);
 
         public void SetListByStatusesResult(IReadOnlyList<IntakeDocument> docs)
-            => _listByStatusesResult = Result<IReadOnlyList<IntakeDocument>>.Success(docs);
+            => _listByStatusesResult = Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Success((docs, docs.Count));
 
         public void SetListByStatusesFailure(Error error)
-            => _listByStatusesResult = Result<IReadOnlyList<IntakeDocument>>.Failure(error);
+            => _listByStatusesResult = Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Failure(error);
 
         public Task<Result<IntakeDocument?>> FindByIdAsync(DocumentId id, TenantId tenantId, CancellationToken ct = default)
             => Task.FromResult(_findByIdResult ?? Result<IntakeDocument?>.Success(null));
@@ -609,8 +610,8 @@ public sealed class ReviewControllerTests
         public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusAsync(TenantId tenantId, DocumentStatus status, int page, int pageSize, CancellationToken ct = default)
             => Task.FromResult(Result<IReadOnlyList<IntakeDocument>>.Success(Array.Empty<IntakeDocument>() as IReadOnlyList<IntakeDocument>));
 
-        public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
-            => Task.FromResult(_listByStatusesResult ?? Result<IReadOnlyList<IntakeDocument>>.Success(Array.Empty<IntakeDocument>() as IReadOnlyList<IntakeDocument>));
+        public Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> ListByStatusesAsync(TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
+            => Task.FromResult(_listByStatusesResult ?? Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Success((Array.Empty<IntakeDocument>() as IReadOnlyList<IntakeDocument>, 0)));
 
         public Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default)
             => Task.FromResult(Result<Unit>.Success(Unit.Value));

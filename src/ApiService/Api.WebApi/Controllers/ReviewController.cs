@@ -52,10 +52,10 @@ public sealed class ReviewController : ControllerBase
         var result = await _listPendingHandler.HandleAsync(tenantId, page, pageSize, ct);
 
         if (result.IsFailure)
-            return StatusCode(500, ApiResponse<IReadOnlyList<ReviewDocumentDto>>.Fail(
+            return StatusCode(500, ApiResponse<PendingReviewResultDto>.Fail(
                 result.Error.Code, "An internal error occurred"));
 
-        return Ok(ApiResponse<IReadOnlyList<ReviewDocumentDto>>.Ok(result.Value));
+        return Ok(ApiResponse<PendingReviewResultDto>.Ok(result.Value));
     }
 
     [HttpGet("{documentId:guid}")]

@@ -38,7 +38,8 @@ public sealed class ListPendingReviewHandlerTests
         var result = await _handler.HandleAsync(tenantId.Value, 1, 20, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(2, result.Value.Count);
+        Assert.Equal(2, result.Value.Items.Count);
+        Assert.Equal(2, result.Value.TotalCount);
     }
 
     [Fact]
@@ -51,7 +52,8 @@ public sealed class ListPendingReviewHandlerTests
         var result = await _handler.HandleAsync(tenantId.Value, 1, 20, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Empty(result.Value);
+        Assert.Empty(result.Value.Items);
+        Assert.Equal(0, result.Value.TotalCount);
     }
 
     [Fact]
@@ -84,14 +86,14 @@ public sealed class ListPendingReviewHandlerTests
             TenantId tenantId, DocumentStatus status, int page, int pageSize, CancellationToken ct = default)
             => throw new NotImplementedException();
 
-        public Task<Result<IReadOnlyList<IntakeDocument>>> ListByStatusesAsync(
+        public Task<Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>> ListByStatusesAsync(
             TenantId tenantId, IReadOnlyList<DocumentStatus> statuses, int page, int pageSize, CancellationToken ct = default)
         {
             if (FailOnPending)
-                return Task.FromResult(Result<IReadOnlyList<IntakeDocument>>.Failure(new Error("DB_ERROR", "timeout")));
+                return Task.FromResult(Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Failure(new Error("DB_ERROR", "timeout")));
 
             IReadOnlyList<IntakeDocument> docs = PendingDocs.Concat(InReviewDocs).ToList();
-            return Task.FromResult(Result<IReadOnlyList<IntakeDocument>>.Success(docs));
+            return Task.FromResult(Result<(IReadOnlyList<IntakeDocument> Items, int TotalCount)>.Success((docs, docs.Count)));
         }
 
         public Task<Result<Unit>> SaveAsync(IntakeDocument document, CancellationToken ct = default)
