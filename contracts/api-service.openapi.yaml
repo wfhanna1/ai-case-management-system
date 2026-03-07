@@ -209,6 +209,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/DocumentDtoApiResponse'
 
+  /api/Documents/{id}/file:
+    get:
+      tags: [Documents]
+      summary: Downloads the original file for a document.
+      operationId: Documents_DownloadFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File returned successfully.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Not authenticated.
+        '404':
+          description: Document not found.
+
   /api/Documents/search:
     get:
       tags: [Documents]
@@ -288,6 +313,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DashboardStatsDtoApiResponse'
+
+  /api/Documents/recent-activity:
+    get:
+      tags: [Documents]
+      summary: Returns recent audit activity for the authenticated tenant.
+      operationId: Documents_RecentActivity
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Recent activity returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentActivityDtoIReadOnlyListApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentActivityDtoIReadOnlyListApiResponse'
 
   # ── Cases ───────────────────────────────────────────────────────────────────
   /api/Cases:
@@ -967,6 +1019,39 @@ components:
         - processedToday
         - averageProcessingTime
 
+    RecentActivityDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        performedBy:
+          type: string
+          format: uuid
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        fieldName:
+          type: string
+          nullable: true
+        previousValue:
+          type: string
+          nullable: true
+        newValue:
+          type: string
+          nullable: true
+      required:
+        - id
+        - documentId
+        - action
+        - timestamp
+
     # ── Case schemas ──────────────────────────────────────────────────────────
     CaseDto:
       type: object
@@ -1289,6 +1374,16 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/DashboardStatsDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    RecentActivityDtoIReadOnlyListApiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentActivityDto'
         error:
           $ref: '#/components/schemas/ApiError'
 

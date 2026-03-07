@@ -6,8 +6,10 @@ This document describes the architecture of the Handwritten Intake Document Proc
 
 ## Table of Contents
 
-1. [C4 Architecture Diagram](#c4-architecture-diagram)
-2. [Microservice Responsibilities and Communication](#microservice-responsibilities-and-communication)
+1. [System Architecture Overview](#system-architecture-overview)
+2. [UML Component Diagram](#uml-component-diagram)
+3. [Document Processing Flow](#document-processing-flow)
+4. [Microservice Responsibilities and Communication](#microservice-responsibilities-and-communication)
 3. [Hexagonal Architecture and DDD Patterns](#hexagonal-architecture-and-ddd-patterns)
 4. [Template and Extraction Design](#template-and-extraction-design)
 5. [RAG: Embedding, Chunking, and Similarity](#rag-embedding-chunking-and-similarity)
@@ -19,18 +21,9 @@ This document describes the architecture of the Handwritten Intake Document Proc
 
 ---
 
-## C4 Architecture Diagram
+## System Architecture Overview
 
-### Level 1: System Context
-
-```mermaid
-graph TB
-    User["Case Worker / Reviewer<br/>(Browser)"]
-    System["Intake Document Processor<br/>(Microservices)"]
-    User -->|"Upload documents,<br/>review extractions,<br/>search cases"| System
-```
-
-### Level 2: Container Diagram
+The following diagram shows the overall system architecture: all services, infrastructure components, and how they connect.
 
 ```mermaid
 graph TB
@@ -44,84 +37,170 @@ graph TB
         RAG["RagService<br/>(.NET 9, Background Worker)"]
     end
 
-    subgraph "Infrastructure"
+    subgraph "Data Stores"
         PG["PostgreSQL 16<br/>(Documents, Users, Cases)"]
-        RMQ["RabbitMQ 3<br/>(Message Broker)"]
         QD["Qdrant<br/>(Vector Database)"]
         FS["Local File Storage<br/>(Document Files)"]
     end
 
+    subgraph "Messaging"
+        RMQ["RabbitMQ 3<br/>(MassTransit)"]
+    end
+
     subgraph "Observability"
-        PROM["Prometheus<br/>(Metrics)"]
-        GRAF["Grafana<br/>(Dashboards)"]
-        LOKI["Loki<br/>(Log Aggregation)"]
-        TEMPO["Tempo<br/>(Distributed Traces)"]
+        PROM["Prometheus"] --- GRAF["Grafana"]
+        LOKI["Loki"] --- GRAF
+        TEMPO["Tempo"] --- GRAF
     end
 
     SPA -->|"REST /api/*"| API
     API -->|"Publish events"| RMQ
     API -->|"EF Core"| PG
     API -->|"File I/O"| FS
-    API -->|"HTTP"| RAG
+    API -->|"HTTP /api/similar"| RAG
 
-    OCR -->|"Consume events"| RMQ
+    RMQ -->|"DocumentUploadedEvent"| OCR
     OCR -->|"Read files"| FS
+    OCR -->|"DocumentProcessedEvent"| RMQ
 
-    RAG -->|"Consume events"| RMQ
+    RMQ -->|"EmbeddingRequestedEvent"| RAG
     RAG -->|"Store/query vectors"| QD
 
-    API -->|"OTLP traces"| TEMPO
-    OCR -->|"OTLP traces"| TEMPO
-    RAG -->|"OTLP traces"| TEMPO
+    RMQ -->|"DocumentProcessedEvent"| API
 
-    PROM -->|"Scrape /metrics"| API
-    PROM -->|"Scrape /metrics"| OCR
-    PROM -->|"Scrape /metrics"| RAG
-
-    GRAF --> PROM
-    GRAF --> LOKI
-    GRAF --> TEMPO
+    API -.->|"OTLP"| TEMPO
+    OCR -.->|"OTLP"| TEMPO
+    RAG -.->|"OTLP"| TEMPO
+    PROM -.->|"Scrape /metrics"| API
 ```
 
-### Level 3: ApiService Component Diagram
+---
+
+## UML Component Diagram
+
+The ApiService follows hexagonal (ports-and-adapters) architecture. Dependencies always point inward.
 
 ```mermaid
-graph TB
-    subgraph "Api.WebApi (Composition Root)"
-        Controllers["Controllers<br/>Auth, Documents, Cases,<br/>Review, FormTemplates"]
-        Middleware["TenantResolutionMiddleware"]
-        Validation["FluentValidation Filter"]
-    end
+classDiagram
+    namespace WebApi {
+        class DocumentsController {
+            +Submit(file) IActionResult
+            +GetById(id) IActionResult
+            +DownloadFile(id) IActionResult
+            +Stats() IActionResult
+            +RecentActivity(limit) IActionResult
+        }
+        class ReviewController {
+            +StartReview(id) IActionResult
+            +CorrectField(id, request) IActionResult
+            +FinalizeReview(id) IActionResult
+            +GetAuditTrail(id) IActionResult
+        }
+        class TenantResolutionMiddleware {
+            +InvokeAsync(context) Task
+        }
+    }
 
-    subgraph "Api.Application (Use Cases)"
-        Commands["Command Handlers<br/>Submit, Review, Correct,<br/>Finalize, Register, Login"]
-        Queries["Query Handlers<br/>List, Search, Dashboard,<br/>SimilarCases, AuditTrail"]
-    end
+    namespace Application {
+        class SubmitDocumentHandler {
+            +HandleAsync(command) Result~DocumentDto~
+        }
+        class GetDashboardStatsHandler {
+            +HandleAsync(tenantId) Result~DashboardStatsDto~
+        }
+        class GetRecentActivitiesHandler {
+            +HandleAsync(tenantId, limit) Result~List~
+        }
+    }
 
-    subgraph "Api.Domain (Core)"
-        Aggregates["Aggregates<br/>IntakeDocument, Case,<br/>User, FormTemplate"]
-        Ports["Port Interfaces<br/>IDocumentRepository,<br/>IFileStoragePort,<br/>IMessageBusPort, ..."]
-        ValueObjects["Value Objects<br/>ExtractedField,<br/>TemplateField"]
-    end
+    namespace Domain {
+        class IntakeDocument {
+            +Submit(file, tenant) IntakeDocument
+            +StartProcessing() Result~Unit~
+            +Complete(fields) Result~Unit~
+            +StartReview(reviewer) Result~Unit~
+            +Finalize(reviewer) Result~Unit~
+        }
+        class IDocumentRepository {
+            <<interface>>
+            +FindByIdAsync(id, tenant) Result~Document~
+            +SaveAsync(doc) Result~Unit~
+        }
+        class IFileStoragePort {
+            <<interface>>
+            +UploadAsync(key, stream) Result~Unit~
+            +DownloadAsync(key, tenant) Result~Stream~
+        }
+        class IMessageBusPort {
+            <<interface>>
+            +PublishDocumentUploadedAsync() Result~Unit~
+        }
+    }
 
-    subgraph "Api.Infrastructure (Adapters)"
-        EF["EF Core Repositories"]
-        Storage["LocalFileStorageAdapter"]
-        MassTransitAdapter["MassTransitMessageBusAdapter"]
-        JWT["JwtTokenService"]
-        RagClient["HttpRagServiceClient"]
-    end
+    namespace Infrastructure {
+        class EfDocumentRepository {
+            -_db IntakeDbContext
+        }
+        class LocalFileStorageAdapter
+        class MassTransitMessageBusAdapter
+        class JwtTokenService
+    }
 
-    Controllers --> Commands
-    Controllers --> Queries
-    Middleware --> Controllers
-    Commands --> Ports
-    Queries --> Ports
-    Ports -.->|"implemented by"| EF
-    Ports -.->|"implemented by"| Storage
-    Ports -.->|"implemented by"| MassTransitAdapter
-    Ports -.->|"implemented by"| JWT
-    Ports -.->|"implemented by"| RagClient
+    DocumentsController --> SubmitDocumentHandler
+    DocumentsController --> GetDashboardStatsHandler
+    DocumentsController --> GetRecentActivitiesHandler
+    SubmitDocumentHandler --> IDocumentRepository
+    SubmitDocumentHandler --> IFileStoragePort
+    SubmitDocumentHandler --> IMessageBusPort
+    EfDocumentRepository ..|> IDocumentRepository
+    LocalFileStorageAdapter ..|> IFileStoragePort
+    MassTransitMessageBusAdapter ..|> IMessageBusPort
+```
+
+---
+
+## Document Processing Flow
+
+End-to-end flow from document upload through OCR processing, review, and embedding.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant API as ApiService
+    participant RMQ as RabbitMQ
+    participant OCR as OcrWorkerService
+    participant RAG as RagService
+    participant QD as Qdrant
+
+    FE->>API: POST /api/documents (upload file)
+    API->>API: Store file, create IntakeDocument (Submitted)
+    API->>RMQ: Publish DocumentUploadedEvent
+
+    RMQ->>OCR: Deliver to ocr-document-uploaded queue
+    OCR->>OCR: Download file, run Tesseract OCR
+    OCR->>OCR: Extract key-value fields from text
+    OCR->>RMQ: Publish DocumentProcessedEvent
+
+    RMQ->>API: Deliver to api-document-processed queue
+    API->>API: Update document: Submitted -> Completed -> PendingReview
+    API->>API: Auto-assign document to Case by subject name
+    API->>RMQ: Publish EmbeddingRequestedEvent
+
+    RMQ->>RAG: Deliver to rag-embedding-requested queue
+    RAG->>RAG: Generate 384-dim embedding from extracted text
+    RAG->>QD: Upsert vector with tenant_id payload
+    RAG->>RMQ: Publish EmbeddingCompletedEvent
+
+    Note over FE,API: Reviewer workflow begins
+
+    FE->>API: POST /api/reviews/{id}/start
+    API->>API: PendingReview -> InReview
+
+    FE->>API: POST /api/reviews/{id}/correct-field
+    API->>API: Store corrected value, log audit entry
+
+    FE->>API: POST /api/reviews/{id}/finalize
+    API->>API: InReview -> Finalized, log audit entry
 ```
 
 ---
@@ -354,9 +433,12 @@ sequenceDiagram
     RMQ->>API: Deliver to api-document-processed queue
     API->>API: Update document: Processing -> Completed -> PendingReview
     API->>API: Auto-assign to Case by subject name
+    API->>RMQ: Publish EmbeddingRequestedEvent
 
-    Note over API,RAG: EmbeddingRequestedEvent publishing is defined<br/>but not yet wired in the current codebase.
-    Note over RAG,QD: RAG embedding flow is triggered<br/>independently via seeded data or direct API calls.
+    RMQ->>RAG: Deliver to rag-embedding-requested queue
+    RAG->>RAG: Generate embedding from extracted text
+    RAG->>QD: Upsert vector with tenant payload
+    RAG->>RMQ: Publish EmbeddingCompletedEvent
 ```
 
 ### Queue Configuration
@@ -386,8 +468,8 @@ All message contracts are defined in the shared `Messaging.Contracts` library as
 |---|---|---|---|
 | `DocumentUploadedEvent` | ApiService | OcrWorkerService | DocumentId, TenantId, FileName, StorageKey, TemplateId |
 | `DocumentProcessedEvent` | OcrWorkerService | ApiService | DocumentId, TenantId, ExtractedFields, ProcessedAt |
-| `EmbeddingRequestedEvent` | ApiService (defined, not yet wired) | RagService | DocumentId, TenantId, TextContent, FieldValues |
-| `EmbeddingCompletedEvent` | RagService | (not yet consumed) | DocumentId, TenantId, CompletedAt |
+| `EmbeddingRequestedEvent` | ApiService | RagService | DocumentId, TenantId, TextContent, FieldValues |
+| `EmbeddingCompletedEvent` | RagService | -- | DocumentId, TenantId, CompletedAt |
 
 ---
 
@@ -470,15 +552,15 @@ Message contracts are the API boundary between services. Putting them in a share
 |---|---|---|---|
 | `SharedKernel.Tests` | Unit | 42 | `Entity<T>`, `ValueObject`, `AggregateRoot<T>`, `Result<T>`, `TenantId`, `DomainEvent`, `AppMetrics`, `ServiceDiagnostics` |
 | `Api.Domain.Tests` | Unit | 66 | `IntakeDocument` state machine, `Case`, `User`, `FormTemplate`, `ExtractedField`, `AuditLogEntry`, `FormTemplateId` |
-| `Api.Application.Tests` | Unit | 103 | All command and query handlers: Submit, Review, Correct, Finalize, Login, Register, Search, Dashboard, SimilarCases, AuditTrail |
+| `Api.Application.Tests` | Unit | 111 | All command and query handlers: Submit, Review, Correct, Finalize, Login, Register, Search, Dashboard, RecentActivities, SimilarCases, AuditTrail |
 | `Api.Infrastructure.Tests` | Integration | 39 | EF Core repositories (in-memory SQLite), tenant isolation, cross-tenant isolation, `BcryptPasswordHasher`, `JwtTokenService`, `LocalFileStorageAdapter`, `HttpRagServiceClient`, `TemplateSummaryAdapter` |
-| `Api.WebApi.Tests` | Unit | 124 | Controllers (Auth, Documents, Cases, Review, FormTemplates), `TenantResolutionMiddleware`, `ValidationFilter`, all FluentValidation validators, `ApiResponse<T>`, Swagger contract tests |
+| `Api.WebApi.Tests` | Unit | 148 | Controllers (Auth, Documents, Cases, Review, FormTemplates), `TenantResolutionMiddleware`, `ValidationFilter`, all FluentValidation validators, `ApiResponse<T>`, Swagger contract tests |
 | `Messaging.Tests` | Unit | 23 | `MassTransitMessageBusAdapter`, all three consumers (`DocumentProcessedConsumer`, `DocumentUploadedConsumer`, `EmbeddingRequestedConsumer`), `TenantHeaderPublishFilter`, contract serialization |
 | `OcrWorker.Tests` | Unit | 19 | `ProcessDocumentHandler`, `MockOcrAdapter`, `TesseractOcrAdapter`, `LocalFileStorageReadAdapter`, consumer log scopes |
 | `RagService.Tests` | Unit | 26 | `EmbedDocumentHandler`, `SimilarDocumentsHandler`, `FindSimilarByTextHandler`, `MockEmbeddingAdapter`, `EmbeddingRequestedConsumer`, `RagDataSeeder` |
 | **Frontend** (Vitest) | Unit | ~10 | Auth store (`authStore.test.ts`), utility functions (`index.test.ts`), JWT parsing (`jwt.test.ts`), validation (`validation.test.ts`) |
 
-**Total backend tests**: ~442 `[Fact]` tests across 8 test projects.
+**Total backend tests**: ~486 `[Fact]` tests across 8 test projects.
 
 ### Testing Approach
 

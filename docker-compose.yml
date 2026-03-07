@@ -27,6 +27,7 @@ services:
         Database=${POSTGRES_DB:-intake_processor};
         Username=${POSTGRES_USER:-postgres};
         Password=${POSTGRES_PASSWORD}
+      Jwt__Secret: ${JWT_SECRET}
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
