@@ -1,0 +1,1469 @@
+openapi: 3.0.3
+info:
+  title: Handwritten Intake Document Processor API
+  version: v1
+  description: REST API for submitting and tracking handwritten intake documents.
+
+servers:
+  - url: http://localhost:5003
+    description: Local development
+
+security:
+  - Bearer: []
+
+paths:
+  # ── Auth ────────────────────────────────────────────────────────────────────
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Registers a new user in the system.
+      operationId: Auth_Register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        '201':
+          description: User registered successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+        '400':
+          description: Email already in use or registration failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+        '422':
+          description: Request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticates a user and issues access and refresh tokens.
+      operationId: Auth_Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+        '401':
+          description: Invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+        '422':
+          description: Request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Issues a new access token using a valid refresh token.
+      operationId: Auth_Refresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+        '401':
+          description: Refresh token is invalid or expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+        '422':
+          description: Request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseApiResponse'
+
+  # ── Documents ───────────────────────────────────────────────────────────────
+  /api/Documents:
+    post:
+      tags: [Documents]
+      summary: Uploads a new intake document for processing.
+      operationId: Documents_Submit
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        '201':
+          description: Document uploaded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
+        '400':
+          description: File is missing, empty, or has an unsupported content type.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Caller does not have the IntakeWorker or Admin role.
+    get:
+      tags: [Documents]
+      summary: Lists all documents for the authenticated tenant, paged.
+      operationId: Documents_List
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Documents returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoIReadOnlyListApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoIReadOnlyListApiResponse'
+
+  /api/Documents/{id}:
+    get:
+      tags: [Documents]
+      summary: Gets a single document by its ID.
+      operationId: Documents_GetById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document found and returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '404':
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDtoApiResponse'
+
+  /api/Documents/{id}/file:
+    get:
+      tags: [Documents]
+      summary: Downloads the original file for a document.
+      operationId: Documents_DownloadFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File returned successfully.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Not authenticated.
+        '404':
+          description: Document not found.
+
+  /api/Documents/search:
+    get:
+      tags: [Documents]
+      summary: Searches documents by file name, status, date range, or extracted field value.
+      operationId: Documents_Search
+      parameters:
+        - name: fileName
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: status
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: fieldValue
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchDocumentsResultDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchDocumentsResultDtoApiResponse'
+
+  /api/Documents/stats:
+    get:
+      tags: [Documents]
+      summary: Returns dashboard statistics for the authenticated tenant.
+      operationId: Documents_Stats
+      responses:
+        '200':
+          description: Statistics returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStatsDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStatsDtoApiResponse'
+
+  /api/Documents/recent-activity:
+    get:
+      tags: [Documents]
+      summary: Returns recent audit activity for the authenticated tenant.
+      operationId: Documents_RecentActivity
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Recent activity returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentActivityDtoIReadOnlyListApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentActivityDtoIReadOnlyListApiResponse'
+
+  # ── Cases ───────────────────────────────────────────────────────────────────
+  /api/Cases:
+    get:
+      tags: [Cases]
+      summary: Lists all cases for the authenticated tenant, paged.
+      operationId: Cases_List
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Cases returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
+
+  /api/Cases/{id}:
+    get:
+      tags: [Cases]
+      summary: Gets a single case by its ID.
+      operationId: Cases_GetById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Case found and returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetailDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '404':
+          description: Case not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetailDtoApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetailDtoApiResponse'
+
+  /api/Cases/search:
+    get:
+      tags: [Cases]
+      summary: Searches cases by keyword, status, or date range.
+      operationId: Cases_Search
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: status
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchCasesResultDtoApiResponse'
+
+  # ── Form Templates ─────────────────────────────────────────────────────────
+  /api/form-templates:
+    post:
+      tags: [FormTemplates]
+      summary: Creates a new form template. Requires Admin role.
+      operationId: FormTemplates_Create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFormTemplateRequest'
+      responses:
+        '201':
+          description: Template created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
+        '400':
+          description: Template creation failed (e.g. duplicate name).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Caller does not have the Admin role.
+        '422':
+          description: Request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
+    get:
+      tags: [FormTemplates]
+      summary: Lists all form templates for the authenticated tenant.
+      operationId: FormTemplates_List
+      responses:
+        '200':
+          description: Templates returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoIReadOnlyListApiResponse'
+        '401':
+          description: Not authenticated.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoIReadOnlyListApiResponse'
+
+  /api/form-templates/{id}:
+    get:
+      tags: [FormTemplates]
+      summary: Gets a single form template by its ID.
+      operationId: FormTemplates_GetById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template found and returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '404':
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormTemplateDtoApiResponse'
+
+  # ── Reviews ─────────────────────────────────────────────────────────────────
+  /api/reviews/pending:
+    get:
+      tags: [Review]
+      summary: Lists documents pending review for the authenticated tenant, paged.
+      operationId: Review_ListPending
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDocumentDtoIReadOnlyListApiResponse'
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDocumentDtoIReadOnlyListApiResponse'
+
+  /api/reviews/{documentId}:
+    get:
+      tags: [Review]
+      summary: Gets the review detail for a specific document, including extracted fields.
+      operationId: Review_GetReview
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review detail returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '404':
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
+
+  /api/reviews/{documentId}/start:
+    post:
+      tags: [Review]
+      summary: Transitions a document into the InReview state, assigning it to the current reviewer.
+      operationId: Review_StartReview
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review started successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '401':
+          description: Not authenticated or user identity missing from token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '404':
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '409':
+          description: Document is not in a state that allows starting review.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+
+  /api/reviews/{documentId}/correct-field:
+    post:
+      tags: [Review]
+      summary: Corrects the value of an extracted field on a document that is under review.
+      operationId: Review_CorrectField
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectFieldRequest'
+      responses:
+        '200':
+          description: Field corrected successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '401':
+          description: Not authenticated or user identity missing from token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '404':
+          description: Document or field not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '409':
+          description: Document is not in a state that allows field correction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '422':
+          description: Request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+
+  /api/reviews/{documentId}/finalize:
+    post:
+      tags: [Review]
+      summary: Finalizes a document review, transitioning the document to the Reviewed state.
+      operationId: Review_Finalize
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review finalized successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '401':
+          description: Not authenticated or user identity missing from token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '404':
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '409':
+          description: Document is not in a state that allows finalization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponseApiResponse'
+
+  /api/reviews/{documentId}/similar-cases:
+    get:
+      tags: [Review]
+      summary: Returns the top 5 cases semantically similar to the given document.
+      operationId: Review_GetSimilarCases
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Similar cases returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarCasesResultDtoApiResponse'
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '500':
+          description: Failed to retrieve similar cases.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarCasesResultDtoApiResponse'
+
+  /api/reviews/{documentId}/audit:
+    get:
+      tags: [Review]
+      summary: Returns the full audit trail for a document.
+      operationId: Review_GetAuditTrail
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Audit trail returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogEntryDtoIReadOnlyListApiResponse'
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Caller does not have the Reviewer or Admin role.
+        '500':
+          description: An unexpected error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogEntryDtoIReadOnlyListApiResponse'
+
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter your JWT token
+
+  schemas:
+    # ── Envelope ──────────────────────────────────────────────────────────────
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+        - code
+        - message
+
+    EmptyResponse:
+      type: object
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          format: int32
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+      additionalProperties: {}
+
+    # ── Auth schemas ──────────────────────────────────────────────────────────
+    RegisterUserRequest:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        password:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+      required:
+        - tenantId
+        - email
+        - password
+        - roles
+
+    LoginRequest:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+          nullable: true
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        refreshToken:
+          type: string
+      required:
+        - userId
+        - tenantId
+        - refreshToken
+
+    AuthResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - userId
+        - accessToken
+        - refreshToken
+        - expiresAt
+
+    # ── Document schemas ──────────────────────────────────────────────────────
+    DocumentDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        originalFileName:
+          type: string
+        status:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - tenantId
+        - originalFileName
+        - status
+        - submittedAt
+
+    SearchDocumentsResultDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentDto'
+        totalCount:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+      required:
+        - items
+        - totalCount
+        - page
+        - pageSize
+
+    DashboardStatsDto:
+      type: object
+      properties:
+        totalCases:
+          type: integer
+        pendingReview:
+          type: integer
+        processedToday:
+          type: integer
+        averageProcessingTime:
+          type: string
+      required:
+        - totalCases
+        - pendingReview
+        - processedToday
+        - averageProcessingTime
+
+    RecentActivityDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        documentId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        performedBy:
+          type: string
+          format: uuid
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        fieldName:
+          type: string
+          nullable: true
+        previousValue:
+          type: string
+          nullable: true
+        newValue:
+          type: string
+          nullable: true
+      required:
+        - id
+        - documentId
+        - action
+        - timestamp
+
+    # ── Case schemas ──────────────────────────────────────────────────────────
+    CaseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        subjectName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        documentCount:
+          type: integer
+      required:
+        - id
+        - tenantId
+        - subjectName
+        - createdAt
+        - updatedAt
+        - documentCount
+
+    CaseDetailDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        subjectName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentDto'
+      required:
+        - id
+        - tenantId
+        - subjectName
+        - createdAt
+        - updatedAt
+        - documents
+
+    SearchCasesResultDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseDto'
+        totalCount:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+      required:
+        - items
+        - totalCount
+        - page
+        - pageSize
+
+    # ── Form Template schemas ─────────────────────────────────────────────────
+    FormTemplateDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateFieldDto'
+      required:
+        - id
+        - tenantId
+        - name
+        - description
+        - type
+        - isActive
+        - createdAt
+        - fields
+
+    TemplateFieldDto:
+      type: object
+      properties:
+        label:
+          type: string
+        fieldType:
+          type: string
+        isRequired:
+          type: boolean
+        options:
+          type: string
+          nullable: true
+      required:
+        - label
+        - fieldType
+        - isRequired
+
+    CreateFormTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateFieldDto'
+      required:
+        - name
+        - description
+        - type
+        - fields
+
+    # ── Review schemas ────────────────────────────────────────────────────────
+    ReviewDocumentDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        originalFileName:
+          type: string
+        status:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: string
+          format: uuid
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        extractedFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtractedFieldDto'
+      required:
+        - id
+        - tenantId
+        - originalFileName
+        - status
+        - submittedAt
+        - extractedFields
+
+    ExtractedFieldDto:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        confidence:
+          type: number
+          format: double
+        correctedValue:
+          type: string
+          nullable: true
+      required:
+        - name
+        - value
+        - confidence
+
+    CorrectFieldRequest:
+      type: object
+      properties:
+        fieldName:
+          type: string
+        newValue:
+          type: string
+      required:
+        - fieldName
+        - newValue
+
+    AuditLogEntryDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        performedBy:
+          type: string
+          format: uuid
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        fieldName:
+          type: string
+          nullable: true
+        previousValue:
+          type: string
+          nullable: true
+        newValue:
+          type: string
+          nullable: true
+      required:
+        - id
+        - action
+        - timestamp
+
+    SimilarCaseDto:
+      type: object
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        score:
+          type: number
+          format: double
+        summary:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - documentId
+        - score
+        - summary
+        - metadata
+
+    SimilarCasesResultDto:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarCaseDto'
+      required:
+        - items
+
+    # ── Typed ApiResponse wrappers ────────────────────────────────────────────
+    AuthResponseApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    DocumentDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DocumentDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    DocumentDtoIReadOnlyListApiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentDto'
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    SearchDocumentsResultDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SearchDocumentsResultDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    DashboardStatsDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DashboardStatsDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    RecentActivityDtoIReadOnlyListApiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentActivityDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    SearchCasesResultDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SearchCasesResultDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    CaseDetailDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CaseDetailDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    FormTemplateDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FormTemplateDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    FormTemplateDtoIReadOnlyListApiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormTemplateDto'
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    ReviewDocumentDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ReviewDocumentDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    ReviewDocumentDtoIReadOnlyListApiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewDocumentDto'
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    EmptyResponseApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmptyResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    SimilarCasesResultDtoApiResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SimilarCasesResultDto'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    AuditLogEntryDtoIReadOnlyListApiResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntryDto'
+          nullable: true
+        error:
+          $ref: '#/components/schemas/ApiError'

@@ -165,5 +165,9 @@ public sealed class StartReviewHandlerTests
 
         public Task<Result<IReadOnlyList<AuditLogEntry>>> ListByDocumentAsync(DocumentId documentId, TenantId tenantId, CancellationToken ct = default)
             => throw new NotImplementedException();
+
+        public Task<Result<IReadOnlyList<AuditLogEntry>>> ListRecentByTenantAsync(
+            TenantId tenantId, int limit, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

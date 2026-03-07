@@ -67,5 +67,9 @@ public sealed class GetAuditTrailHandlerTests
                 return Task.FromResult(Result<IReadOnlyList<AuditLogEntry>>.Failure(new Error("DB_ERROR", "timeout")));
             return Task.FromResult(Result<IReadOnlyList<AuditLogEntry>>.Success(Entries));
         }
+
+        public Task<Result<IReadOnlyList<AuditLogEntry>>> ListRecentByTenantAsync(
+            TenantId tenantId, int limit, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

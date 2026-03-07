@@ -1,0 +1,26 @@
+# GitGuardian configuration
+# See: https://docs.gitguardian.com/ggshield-docs/reference/gitguardian-yaml
+
+secret:
+  ignored-paths:
+    # Test files use fake credentials (e.g., "Password123!", "fake-access-token")
+    - "tests/**"
+    - "**/Tests/**"
+    # Development-only configuration with clearly labeled dev secrets
+    - "src/ApiService/Api.WebApi/appsettings.Development.json"
+    # Demo seed data with example passwords
+    - "src/ApiService/Api.WebApi/DevelopmentDbSeeder.cs"
+    - "src/ApiService/Api.WebApi/DemoTenants.cs"
+    # Example environment file (contains placeholder values only)
+    - ".env.example"
+
+  ignored-matches:
+    # False positive: test credential strings in unit/integration tests
+    - name: "Test credential strings"
+      match: "Password123!"
+    - name: "Fake JWT tokens in tests"
+      match: "fake-access-token"
+    - name: "Fake refresh tokens in tests"
+      match: "fake-refresh-token"
+    - name: "Demo user password"
+      match: "Demo123!"

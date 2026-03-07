@@ -56,7 +56,7 @@ This starts all 7 services:
 
 ```bash
 dotnet build                    # Build all projects
-dotnet test                     # Run all tests (50 tests)
+dotnet test                     # Run all tests (~486 tests)
 dotnet run --project src/ApiService/Api.WebApi  # Run API on port 5003
 ```
 

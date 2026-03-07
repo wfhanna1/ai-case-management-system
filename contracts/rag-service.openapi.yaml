@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: RAG Service API
+  version: v1
+  description: Internal vector similarity search service for the AI Case Management System.
+
+paths:
+  /api/similar:
+    get:
+      summary: Find similar documents by document ID
+      operationId: getSimilarDocuments
+      parameters:
+        - name: documentId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: topK
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+            minimum: 1
+            maximum: 50
+      responses:
+        "200":
+          description: Similar documents found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimilarResponse"
+        "400":
+          description: Bad request (invalid topK)
+        "500":
+          description: Internal server error
+
+  /api/similar-by-text:
+    post:
+      summary: Find similar documents by text
+      operationId: getSimilarDocumentsByText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimilarByTextRequest"
+      responses:
+        "200":
+          description: Similar documents found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimilarResponse"
+        "400":
+          description: Bad request
+        "500":
+          description: Internal server error
+
+components:
+  schemas:
+    SimilarByTextRequest:
+      type: object
+      required:
+        - text
+        - tenantId
+      properties:
+        text:
+          type: string
+        tenantId:
+          type: string
+          format: uuid
+        topK:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 50
+
+    SearchHit:
+      type: object
+      required:
+        - documentId
+        - score
+        - metadata
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        score:
+          type: number
+          format: double
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    SimilarResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"

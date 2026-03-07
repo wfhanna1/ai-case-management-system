@@ -10,4 +10,5 @@ public interface IAuditLogRepository
 {
     Task<Result<Unit>> SaveAsync(AuditLogEntry entry, CancellationToken ct = default);
     Task<Result<IReadOnlyList<AuditLogEntry>>> ListByDocumentAsync(DocumentId documentId, TenantId tenantId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<AuditLogEntry>>> ListRecentByTenantAsync(TenantId tenantId, int limit, CancellationToken ct = default);
 }

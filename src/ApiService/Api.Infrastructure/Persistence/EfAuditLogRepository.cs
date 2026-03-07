@@ -32,6 +32,27 @@ public sealed class EfAuditLogRepository : IAuditLogRepository
         }
     }
 
+    public async Task<Result<IReadOnlyList<AuditLogEntry>>> ListRecentByTenantAsync(
+        TenantId tenantId, int limit, CancellationToken ct = default)
+    {
+        try
+        {
+            var entries = await _db.AuditLogEntries
+                .Where(a => a.TenantId == tenantId)
+                .OrderByDescending(a => a.Timestamp)
+                .Take(limit)
+                .ToListAsync(ct);
+            return Result<IReadOnlyList<AuditLogEntry>>.Success(entries);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to list recent audit log entries for tenant {TenantId}",
+                tenantId.Value);
+            return Result<IReadOnlyList<AuditLogEntry>>.Failure(new Error("DB_ERROR", "An internal error occurred"));
+        }
+    }
+
     public async Task<Result<IReadOnlyList<AuditLogEntry>>> ListByDocumentAsync(
         DocumentId documentId, TenantId tenantId, CancellationToken ct = default)
     {

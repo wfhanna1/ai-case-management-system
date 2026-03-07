@@ -38,6 +38,19 @@ builder.Services.AddOpenTelemetry()
 builder.Logging.AddStructuredConsoleLogging();
 
 // ---------------------------------------------------------------------------
+// Swagger / OpenAPI
+// ---------------------------------------------------------------------------
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "RAG Service API",
+        Version = "v1"
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Health checks
 // ---------------------------------------------------------------------------
 var rabbitHost = builder.Configuration["RabbitMQ__Host"]
@@ -90,6 +103,15 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddHostedService<RagWorkerService>();
 
 var app = builder.Build();
+
+// ---------------------------------------------------------------------------
+// Swagger (Development only)
+// ---------------------------------------------------------------------------
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 // ---------------------------------------------------------------------------
 // Endpoints
@@ -148,3 +170,5 @@ app.MapPost("/api/similar-by-text", async (
 });
 
 app.Run();
+
+public partial class Program { }

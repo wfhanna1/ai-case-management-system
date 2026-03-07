@@ -3,6 +3,7 @@ import type {
   DocumentDto,
   ReviewDocumentDto,
   AuditLogEntryDto,
+  RecentActivityDto,
   FormTemplateDto,
   CaseDetailDto,
   SearchDocumentsResultDto,
@@ -47,6 +48,13 @@ export async function mockUploadDocumentError(page: Page, code: string, message:
     }
     return route.continue();
   });
+}
+
+// Recent Activity
+export async function mockGetRecentActivity(page: Page, activities: RecentActivityDto[]) {
+  await page.route('**/api/documents/recent-activity*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk(activities)) })
+  );
 }
 
 // Reviews

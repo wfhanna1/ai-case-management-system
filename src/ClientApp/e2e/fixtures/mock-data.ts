@@ -242,6 +242,31 @@ export function createSimilarCaseDto(overrides: Partial<SimilarCaseDto> = {}): S
   };
 }
 
+export interface RecentActivityDto {
+  id: string;
+  documentId: string;
+  action: string;
+  performedBy: string | null;
+  timestamp: string;
+  fieldName: string | null;
+  previousValue: string | null;
+  newValue: string | null;
+}
+
+export function createRecentActivityDto(overrides: Partial<RecentActivityDto> = {}): RecentActivityDto {
+  return {
+    id: nextId(),
+    documentId: nextId(),
+    action: 'ExtractionCompleted',
+    performedBy: null,
+    timestamp: '2026-03-01T10:05:00Z',
+    fieldName: null,
+    previousValue: null,
+    newValue: null,
+    ...overrides,
+  };
+}
+
 export function apiOk<T>(data: T) {
   return { data, error: null };
 }

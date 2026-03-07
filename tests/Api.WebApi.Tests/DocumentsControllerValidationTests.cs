@@ -24,6 +24,7 @@ public sealed class DocumentsControllerValidationTests
             new ListDocumentsByTenantHandler(null!),
             new SearchDocumentsHandler(null!),
             new GetDashboardStatsHandler(null!, null!),
+            new GetRecentActivitiesHandler(null!),
             tenantContext);
     }
 
