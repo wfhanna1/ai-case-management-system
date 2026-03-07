@@ -129,7 +129,12 @@ public sealed class EfDocumentRepository : IDocumentRepository
     {
         try
         {
-            _db.Documents.Update(document);
+            // Do not call _db.Documents.Update(document) here.
+            // The entity is already tracked by the DbContext (loaded via FindByIdAsync).
+            // Calling Update() on a tracked entity can interfere with EF Core's
+            // JSON column change detection for owned entities stored via ToJson().
+            // Instead, rely on automatic change detection in SaveChangesAsync(),
+            // which properly compares JSON column snapshots.
             await _db.SaveChangesAsync(ct);
             return Result<Unit>.Success(Unit.Value);
         }
