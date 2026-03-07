@@ -38,7 +38,7 @@ This starts all 7 services:
 
 | Service | URL |
 |---------|-----|
-| API | http://localhost:5000 |
+| API | http://localhost:5003 |
 | Frontend | http://localhost:3000 |
 | RabbitMQ Management | http://localhost:15672 |
 | PostgreSQL | localhost:5432 |
@@ -46,7 +46,7 @@ This starts all 7 services:
 
 ### 3. Verify
 
-- API health check: `curl http://localhost:5000/health`
+- API health check: `curl http://localhost:5003/health`
 - Frontend: open http://localhost:3000 in a browser
 - RabbitMQ UI: open http://localhost:15672 (credentials from your `.env`)
 
@@ -57,7 +57,7 @@ This starts all 7 services:
 ```bash
 dotnet build                    # Build all projects
 dotnet test                     # Run all tests (50 tests)
-dotnet run --project src/ApiService/Api.WebApi  # Run API on port 5000
+dotnet run --project src/ApiService/Api.WebApi  # Run API on port 5003
 ```
 
 ### Frontend
