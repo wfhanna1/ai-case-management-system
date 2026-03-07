@@ -83,7 +83,7 @@ builder.Services.AddRagMessaging(builder.Configuration);
 // ---------------------------------------------------------------------------
 // Embedding + Vector Store
 // ---------------------------------------------------------------------------
-builder.Services.AddSingleton<IEmbeddingPort, MockEmbeddingAdapter>();
+builder.Services.AddEmbeddingAdapter(builder.Configuration);
 builder.Services.AddSingleton<EmbedDocumentHandler>();
 builder.Services.AddSingleton<SimilarDocumentsHandler>();
 builder.Services.AddSingleton<FindSimilarByTextHandler>();

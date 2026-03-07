@@ -56,6 +56,14 @@ docker compose up --build
 
 First build takes a few minutes. Subsequent starts are faster due to layer caching.
 
+During the first build, the `bge-micro-v2` embedding model (~23 MB) is downloaded from Hugging Face and bundled into the RAG service container image. This is automatic and only happens once; subsequent builds use the cached layer.
+
+**Re-seeding embeddings:** If you need to regenerate the Qdrant vector data (for example, after changing the embedding provider), wipe all volumes and rebuild:
+
+```bash
+docker compose down -v && docker compose up --build
+```
+
 ### 5. Verify
 
 Wait for all services to report healthy (about 30 seconds after initial build):

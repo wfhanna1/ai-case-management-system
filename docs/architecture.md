@@ -346,8 +346,9 @@ Each transition is a method on the `IntakeDocument` aggregate that returns `Resu
 The RagService generates vector embeddings for document text to enable similarity search. The current architecture uses a port/adapter pattern:
 
 - **Port**: `IEmbeddingPort.GenerateEmbeddingAsync(string text) -> Result<float[]>`
-- **Mock adapter** (current): `MockEmbeddingAdapter` produces deterministic 384-dimensional unit vectors by seeding a random number generator with a SHA-256 hash of the input text, then L2-normalizing the result. Same input always produces the same embedding.
-- **Production adapter** (planned): Would call OpenAI's text-embedding-ada-002 or a local sentence-transformers model.
+- **Local adapter** (default): `LocalEmbeddingAdapter` uses Microsoft's `SmartComponents.LocalEmbeddings` package with the `bge-micro-v2` model. Produces 384-dimensional L2-normalized vectors with real semantic meaning. Runs on CPU inside the RagService process (~50ms per embedding, ~23MB model auto-downloaded on first use).
+- **Mock adapter** (fallback): `MockEmbeddingAdapter` produces deterministic 384-dimensional unit vectors by seeding a random number generator with a SHA-256 hash of the input text. No semantic meaning. Set `EMBEDDING_PROVIDER=mock` to use.
+- **Configuration**: The `Embedding:Provider` setting (env var `Embedding__Provider` or `EMBEDDING_PROVIDER`) controls which adapter is registered. Default is `local`.
 
 ### Chunking Strategy
 
@@ -371,7 +372,13 @@ The API service calls the RAG service's `POST /api/similar-by-text` endpoint, wh
 
 ### Data Seeding
 
-In development, `RagDataSeeder` seeds 200+ synthetic case embeddings across all four template types and both demo tenants. This provides realistic similarity search results for development and demo purposes.
+In development, `RagDataSeeder` seeds 205 synthetic case embeddings across all four template types and both demo tenants using the configured embedding adapter. With the default `local` provider, these are real semantic embeddings that produce meaningful similarity search results.
+
+The seeder checks whether Qdrant already has data before running. To re-seed (for example, after switching from mock to real embeddings), wipe all volumes and rebuild:
+
+```bash
+docker compose down -v && docker compose up --build
+```
 
 ---
 
@@ -485,7 +492,7 @@ The system uses port/adapter interfaces throughout, making it straightforward to
 | Component | Port Interface | Production Adapter | Mock/Stub Adapter | Current Default |
 |---|---|---|---|---|
 | OCR Engine | `IOcrPort` | `TesseractOcrAdapter` (shells out to Tesseract CLI, Docnet for PDF rendering) | `MockOcrAdapter` (generates random fields with configurable patterns) | **Configurable**: `Ocr:Mode=tesseract` selects production, `mock` selects stub. Docker uses `tesseract` mode. |
-| Embedding Generation | `IEmbeddingPort` | Planned: OpenAI / sentence-transformers | `MockEmbeddingAdapter` (deterministic 384-dim vectors from SHA-256 hash) | **Mock** |
+| Embedding Generation | `IEmbeddingPort` | `LocalEmbeddingAdapter` (SmartComponents bge-micro-v2, 384-dim, CPU) | `MockEmbeddingAdapter` (deterministic 384-dim vectors from SHA-256 hash) | **Configurable**: `Embedding:Provider=local` selects production, `mock` selects stub. Docker uses `local` mode. |
 | Vector Store | `IVectorStorePort` | `QdrantVectorStoreAdapter` (gRPC client to Qdrant) | N/A | **Production** (Qdrant runs in Docker) |
 | File Storage | `IFileStoragePort` | Planned: Azure Blob / S3 | `LocalFileStorageAdapter` (local filesystem) | **Local filesystem** |
 | Message Bus | `IMessageBusPort` | `MassTransitMessageBusAdapter` (RabbitMQ) | N/A | **Production** (RabbitMQ runs in Docker) |
@@ -495,9 +502,8 @@ The system uses port/adapter interfaces throughout, making it straightforward to
 | RAG Client | `IRagServiceClient` | `HttpRagServiceClient` (HTTP to RagService) | N/A | **Production** (calls RAG service) |
 
 To move to production, the following adapters need replacement:
-1. `MockEmbeddingAdapter` with an OpenAI or local model adapter
-2. `LocalFileStorageAdapter` with Azure Blob or S3
-3. `TemplateSummaryAdapter` with an LLM-based summary generator
+1. `LocalFileStorageAdapter` with Azure Blob or S3
+2. `TemplateSummaryAdapter` with an LLM-based summary generator
 
 ---
 

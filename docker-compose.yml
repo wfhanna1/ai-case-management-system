@@ -113,6 +113,7 @@ services:
       Qdrant__Port: ${QDRANT_GRPC_PORT:-6334}
       Qdrant__HttpPort: "6333"
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
+      Embedding__Provider: ${EMBEDDING_PROVIDER:-local}
       OTEL_SERVICE_NAME: RagService
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8080'"]

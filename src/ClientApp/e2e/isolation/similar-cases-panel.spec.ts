@@ -90,6 +90,67 @@ reviewerTest.describe('Similar cases panel (isolation)', () => {
     await expect(reviewerPage.getByText('Neglect')).toBeVisible();
   });
 
+  reviewerTest('displays cases sorted by descending similarity score', async ({ reviewerPage }) => {
+    const doc = createReviewDocumentDto({ status: 'InReview' });
+    const id1 = 'aaaa1111-1111-1111-1111-111111111111';
+    const id2 = 'bbbb2222-2222-2222-2222-222222222222';
+    const id3 = 'cccc3333-3333-3333-3333-333333333333';
+    const similar = {
+      items: [
+        createSimilarCaseDto({ documentId: id1, score: 0.95 }),
+        createSimilarCaseDto({ documentId: id2, score: 0.82 }),
+        createSimilarCaseDto({ documentId: id3, score: 0.61 }),
+      ],
+    };
+    await mockGetReviewDocument(reviewerPage, doc);
+    await mockGetSimilarCases(reviewerPage, doc.id, similar);
+    await reviewerPage.goto(`/reviews/${doc.id}`);
+
+    await reviewerPage.getByText('Similar Cases').click();
+
+    const cases = reviewerPage.locator('[data-testid^="similar-case-"]');
+    await expect(cases).toHaveCount(3);
+
+    // Verify DOM order matches score-descending order
+    await expect(cases.nth(0)).toHaveAttribute('data-testid', `similar-case-${id1}`);
+    await expect(cases.nth(1)).toHaveAttribute('data-testid', `similar-case-${id2}`);
+    await expect(cases.nth(2)).toHaveAttribute('data-testid', `similar-case-${id3}`);
+  });
+
+  reviewerTest('shows correct badge colors for score thresholds', async ({ reviewerPage }) => {
+    const doc = createReviewDocumentDto({ status: 'InReview' });
+    const idHigh = 'dddd4444-4444-4444-4444-444444444444';
+    const idMedium = 'eeee5555-5555-5555-5555-555555555555';
+    const idLow = 'ffff6666-6666-6666-6666-666666666666';
+    const similar = {
+      items: [
+        createSimilarCaseDto({ documentId: idHigh, score: 0.95 }),
+        createSimilarCaseDto({ documentId: idMedium, score: 0.75 }),
+        createSimilarCaseDto({ documentId: idLow, score: 0.45 }),
+      ],
+    };
+    await mockGetReviewDocument(reviewerPage, doc);
+    await mockGetSimilarCases(reviewerPage, doc.id, similar);
+    await reviewerPage.goto(`/reviews/${doc.id}`);
+
+    await reviewerPage.getByText('Similar Cases').click();
+
+    // High score (>=0.9) gets success color (green)
+    const badgeHigh = reviewerPage.getByTestId(`score-badge-${idHigh}`);
+    await expect(badgeHigh).toHaveText('95% match');
+    await expect(badgeHigh).toHaveClass(/MuiChip-colorSuccess/);
+
+    // Medium score (0.7-0.9) gets warning color (yellow/orange)
+    const badgeMedium = reviewerPage.getByTestId(`score-badge-${idMedium}`);
+    await expect(badgeMedium).toHaveText('75% match');
+    await expect(badgeMedium).toHaveClass(/MuiChip-colorWarning/);
+
+    // Low score (<0.7) gets default color (gray)
+    const badgeLow = reviewerPage.getByTestId(`score-badge-${idLow}`);
+    await expect(badgeLow).toHaveText('45% match');
+    await expect(badgeLow).toHaveClass(/MuiChip-colorDefault/);
+  });
+
   reviewerTest('shows loading state', async ({ reviewerPage }) => {
     const doc = createReviewDocumentDto({ status: 'InReview' });
     await mockGetReviewDocument(reviewerPage, doc);
