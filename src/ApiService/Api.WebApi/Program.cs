@@ -43,6 +43,12 @@ builder.Services.AddOpenTelemetry()
         .AddMeter(serviceDiagnostics.ServiceName)
         .AddPrometheusExporter());
 
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+});
 builder.Logging.AddOpenTelemetry(logging =>
 {
     logging.IncludeScopes = true;
