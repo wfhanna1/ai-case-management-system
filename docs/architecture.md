@@ -248,7 +248,7 @@ A background worker that generates vector embeddings and provides similarity sea
 
 ### Inter-Service Communication
 
-Services communicate exclusively through RabbitMQ (via MassTransit) for asynchronous processing and HTTP for synchronous queries (API to RAG for similarity search). There is no direct database sharing between services -- the API owns the PostgreSQL schema, and the RAG service owns the Qdrant collection.
+Services communicate exclusively through RabbitMQ (via MassTransit) for asynchronous processing and HTTP for synchronous queries (API to RAG for similarity search). There is no direct database sharing between services. The API owns the PostgreSQL schema, and the RAG service owns the Qdrant collection.
 
 ---
 
@@ -265,15 +265,15 @@ Each service follows the same four-layer hexagonal (ports-and-adapters) structur
 
 ### Why Hexagonal Architecture
 
-All business logic lives in the Domain layer. Aggregates enforce their own invariants -- state transitions, validation, and tenant ownership -- without any knowledge of how data is persisted or messages are dispatched. The domain layer defines port interfaces (e.g., `IDocumentRepository`, `IFileStoragePort`, `IMessageBusPort`) that infrastructure adapters implement. Infrastructure contains zero business logic; adapters only translate between domain contracts and external systems. This keeps the domain free of framework dependencies: the `IntakeDocument` aggregate does not know about EF Core, RabbitMQ, or the filesystem. The benefit is testability -- every handler can be tested with hand-written test doubles that implement the same port interfaces, without spinning up databases or message brokers.
+All business logic lives in the Domain layer. Aggregates enforce their own invariants (state transitions, validation, and tenant ownership) without any knowledge of how data is persisted or messages are dispatched. The domain layer defines port interfaces (e.g., `IDocumentRepository`, `IFileStoragePort`, `IMessageBusPort`) that infrastructure adapters implement. Infrastructure contains zero business logic; adapters only translate between domain contracts and external systems. This keeps the domain free of framework dependencies: the `IntakeDocument` aggregate does not know about EF Core, RabbitMQ, or the filesystem. The benefit is testability: every handler can be tested with hand-written test doubles that implement the same port interfaces, without spinning up databases or message brokers.
 
 Dependencies always point inward: Infrastructure depends on Domain, never the reverse. Application depends on Domain for entities and ports. The Host/WebApi layer is the composition root that wires everything together via DI.
 
-This strict decoupling is what enables a clean architecture approach. Because the Domain layer has no outward dependencies, it can be understood, tested, and refactored in complete isolation from delivery mechanisms and persistence details. The Application layer coordinates use cases by composing domain operations and port calls, but never contains business rules itself. Infrastructure is purely mechanical -- it implements the contracts the domain defines, nothing more. The result is that each layer has a single reason to change: domain changes when business rules change, application changes when workflow orchestration changes, and infrastructure changes when external systems change. No layer bleeds into another.
+This strict decoupling is what enables a clean architecture approach. Because the Domain layer has no outward dependencies, it can be understood, tested, and refactored in complete isolation from delivery mechanisms and persistence details. The Application layer coordinates use cases by composing domain operations and port calls, but never contains business rules itself. Infrastructure is purely mechanical: it implements the contracts the domain defines, nothing more. The result is that each layer has a single reason to change: domain changes when business rules change, application changes when workflow orchestration changes, and infrastructure changes when external systems change. No layer bleeds into another.
 
 ### Domain-Driven Design Building Blocks
 
-**Aggregates**: `IntakeDocument`, `Case`, `User`, `FormTemplate`, `AuditLogEntry`. Each aggregate inherits from `AggregateRoot<TId>`, which extends `Entity<TId>` with domain event support. Aggregates enforce their own invariants -- for example, `IntakeDocument` enforces a strict state machine (Submitted -> Processing -> Completed -> PendingReview -> InReview -> Finalized) via `Result<T>` returns on transition methods.
+**Aggregates**: `IntakeDocument`, `Case`, `User`, `FormTemplate`, `AuditLogEntry`. Each aggregate inherits from `AggregateRoot<TId>`, which extends `Entity<TId>` with domain event support. Aggregates enforce their own invariants. For example, `IntakeDocument` enforces a strict state machine (Submitted -> Processing -> Completed -> PendingReview -> InReview -> Finalized) via `Result<T>` returns on transition methods.
 
 **Value Objects**: `ExtractedField`, `TemplateField`, `TenantId`, `DocumentId`, `CaseId`, `UserId`, `FormTemplateId`. Value objects inherit from `ValueObject` (structural equality) or are implemented as sealed classes wrapping a `Guid`. Strongly-typed IDs prevent passing a `DocumentId` where a `CaseId` is expected.
 
@@ -505,15 +505,15 @@ To move to production, the following adapters need replacement:
 
 ### Why microservices instead of a monolith?
 
-The document processing pipeline has clear bounded contexts with different scaling profiles. OCR is CPU-intensive and benefits from independent scaling. The RAG service has its own data store (Qdrant) and could be replaced or upgraded independently. The API handles user-facing traffic with different latency requirements than background processing. Splitting into three services also enables independent deployment -- updating the OCR engine does not require redeploying the API.
+The document processing pipeline has clear bounded contexts with different scaling profiles. OCR is CPU-intensive and benefits from independent scaling. The RAG service has its own data store (Qdrant) and could be replaced or upgraded independently. The API handles user-facing traffic with different latency requirements than background processing. Splitting into three services also enables independent deployment: updating the OCR engine does not require redeploying the API.
 
 ### Why hexagonal architecture?
 
-Hexagonal architecture was chosen to decouple business logic from infrastructure concerns. All business logic lives inside the Domain layer -- aggregates enforce their own invariants (state transitions, validation rules, tenant ownership checks) and the Application layer orchestrates use cases by calling domain methods and port interfaces. Infrastructure adapters contain zero business logic; they only translate between domain contracts and external systems (EF Core, RabbitMQ, filesystem). This separation is what makes the architecture genuinely clean: the domain can be developed, tested, and reasoned about without knowing whether data lives in PostgreSQL or an in-memory dictionary, and without knowing whether messages flow through RabbitMQ or a direct method call. Each layer changes for exactly one reason -- business rules change the domain, workflow changes touch the application layer, and technology changes affect only infrastructure. The primary benefit is testability: every handler in the Application layer can be tested with hand-written in-memory test doubles that implement the port interfaces. No database, no message broker, no file system needed for unit tests. The secondary benefit is portability: swapping from local file storage to Azure Blob requires changing only the adapter registration in the composition root, not any business logic.
+Hexagonal architecture was chosen to decouple business logic from infrastructure concerns. All business logic lives inside the Domain layer. Aggregates enforce their own invariants (state transitions, validation rules, tenant ownership checks) and the Application layer orchestrates use cases by calling domain methods and port interfaces. Infrastructure adapters contain zero business logic; they only translate between domain contracts and external systems (EF Core, RabbitMQ, filesystem). This separation is what makes the architecture genuinely clean: the domain can be developed, tested, and reasoned about without knowing whether data lives in PostgreSQL or an in-memory dictionary, and without knowing whether messages flow through RabbitMQ or a direct method call. Each layer changes for exactly one reason: business rules change the domain, workflow changes touch the application layer, and technology changes affect only infrastructure. The primary benefit is testability: every handler in the Application layer can be tested with hand-written in-memory test doubles that implement the port interfaces. No database, no message broker, no file system needed for unit tests. The secondary benefit is portability: swapping from local file storage to Azure Blob requires changing only the adapter registration in the composition root, not any business logic.
 
 ### Why DDD with aggregates and value objects?
 
-The domain has genuine complexity: documents go through a multi-step state machine, fields can be corrected during review, cases group related documents, and all of this must respect tenant boundaries. DDD aggregates enforce invariants at the domain level -- the `IntakeDocument` aggregate prevents invalid state transitions regardless of which adapter or handler is calling it. Value objects like `ExtractedField` and `TenantId` provide structural equality and type safety.
+The domain has genuine complexity: documents go through a multi-step state machine, fields can be corrected during review, cases group related documents, and all of this must respect tenant boundaries. DDD aggregates enforce invariants at the domain level. The `IntakeDocument` aggregate prevents invalid state transitions regardless of which adapter or handler is calling it. Value objects like `ExtractedField` and `TenantId` provide structural equality and type safety.
 
 ### Why Result\<T\> instead of exceptions?
 
@@ -529,7 +529,7 @@ MassTransit provides consumer abstraction, message retry with exponential backof
 
 ### Why EF Core global query filters for tenant isolation?
 
-Global query filters provide defense-in-depth for multi-tenancy. Even if a developer forgets to add a `WHERE tenant_id = @tenantId` clause, the global filter ensures no cross-tenant data is returned. This is a safety net, not the only line of defense -- repositories also take `TenantId` as an explicit parameter.
+Global query filters provide defense-in-depth for multi-tenancy. Even if a developer forgets to add a `WHERE tenant_id = @tenantId` clause, the global filter ensures no cross-tenant data is returned. This is a safety net, not the only line of defense. Repositories also take `TenantId` as an explicit parameter.
 
 ### Why hand-written test doubles instead of mocking frameworks?
 
@@ -545,7 +545,7 @@ Message contracts are the API boundary between services. Putting them in a share
 
 ### Why PostgreSQL JSON columns for extracted fields and template fields?
 
-`ExtractedField` and `TemplateField` are owned collections that belong to their parent aggregate. Storing them as JSON columns (via EF Core's `OwnsMany(...).ToJson()`) keeps the data model simple -- no separate tables, no joins, no orphan cleanup. The tradeoff is that you cannot query individual fields efficiently with SQL, but the system does not need to -- fields are always loaded and saved as part of their parent aggregate.
+`ExtractedField` and `TemplateField` are owned collections that belong to their parent aggregate. Storing them as JSON columns (via EF Core's `OwnsMany(...).ToJson()`) keeps the data model simple: no separate tables, no joins, no orphan cleanup. The tradeoff is that you cannot query individual fields efficiently with SQL, but the system does not need to. Fields are always loaded and saved as part of their parent aggregate.
 
 ---
 
