@@ -34,6 +34,7 @@ public sealed class DocumentProcessedConsumerTests
             .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
             .AddScoped<ICaseRepository, StubCaseRepository>()
             .AddScoped<AssignDocumentToCaseHandler>()
+            .AddScoped<CompleteDocumentProcessingHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -105,6 +106,7 @@ public sealed class DocumentProcessedConsumerTests
             .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
             .AddScoped<ICaseRepository, StubCaseRepository>()
             .AddScoped<AssignDocumentToCaseHandler>()
+            .AddScoped<CompleteDocumentProcessingHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -138,7 +140,9 @@ public sealed class DocumentProcessedConsumerTests
                 ProcessedAt: DateTimeOffset.UtcNow));
 
             Assert.True(await harness.Consumed.Any<DocumentProcessedEvent>());
-            Assert.False(await harness.Published.Any<Fault<DocumentProcessedEvent>>());
+            // Tenant mismatch now causes the handler to return failure,
+            // which the consumer surfaces as a fault.
+            Assert.True(await harness.Published.Any<Fault<DocumentProcessedEvent>>());
 
             using var scope = provider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<IntakeDbContext>();
@@ -173,6 +177,7 @@ public sealed class DocumentProcessedConsumerTests
             .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
             .AddScoped<ICaseRepository, StubCaseRepository>()
             .AddScoped<AssignDocumentToCaseHandler>()
+            .AddScoped<CompleteDocumentProcessingHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();
@@ -238,6 +243,7 @@ public sealed class DocumentProcessedConsumerTests
             .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
             .AddScoped<ICaseRepository, StubCaseRepository>()
             .AddScoped<AssignDocumentToCaseHandler>()
+            .AddScoped<CompleteDocumentProcessingHandler>()
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddConsumer<DocumentProcessedConsumer>();

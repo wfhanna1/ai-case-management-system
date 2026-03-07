@@ -36,29 +36,11 @@ public sealed class AssignDocumentToCaseHandler
             return Result<Unit>.Failure(new Error("FORBIDDEN",
                 "Document does not belong to the specified tenant."));
 
-        // Prefer "Subject" name fields for case assignment, then "Client", then any name field.
-        var nameFields = document.ExtractedFields
-            .Where(f => f.Name.Contains("Name", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var nameField = nameFields
-            .FirstOrDefault(f => f.Name.Contains("Subject", StringComparison.OrdinalIgnoreCase))
-            ?? nameFields.FirstOrDefault(f => f.Name.Contains("Client", StringComparison.OrdinalIgnoreCase))
-            ?? nameFields.FirstOrDefault();
-
-        if (nameField is null)
+        var subjectName = document.ResolveSubjectName();
+        if (subjectName is null)
         {
             _logger.LogInformation(
-                "No name field found on document {DocumentId}. Skipping case assignment.",
-                documentId.Value);
-            return Result<Unit>.Success(Unit.Value);
-        }
-
-        var subjectName = (nameField.CorrectedValue ?? nameField.Value).Trim();
-        if (string.IsNullOrWhiteSpace(subjectName))
-        {
-            _logger.LogInformation(
-                "Name field is blank on document {DocumentId}. Skipping case assignment.",
+                "No usable name field found on document {DocumentId}. Skipping case assignment.",
                 documentId.Value);
             return Result<Unit>.Success(Unit.Value);
         }

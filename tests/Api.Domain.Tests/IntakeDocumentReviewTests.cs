@@ -15,6 +15,15 @@ public sealed class IntakeDocumentReviewTests
         return doc;
     }
 
+    private IntakeDocument CreateDocumentWithFields(params (string Name, string Value)[] fields)
+    {
+        var doc = IntakeDocument.Submit(_tenantId, "test.pdf", "storage/key");
+        doc.MarkProcessing();
+        var extractedFields = fields.Select(f => new ExtractedField(f.Name, f.Value, 0.95)).ToList();
+        doc.MarkCompleted(extractedFields);
+        return doc;
+    }
+
     // --- MarkCompleted with fields ---
 
     [Fact]
@@ -186,6 +195,110 @@ public sealed class IntakeDocumentReviewTests
         var result = doc.CorrectField("patientname", "Jane Doe", reviewerId);
 
         Assert.True(result.IsSuccess);
+    }
+
+    // --- EnsureInReview ---
+
+    [Fact]
+    public void EnsureInReview_from_PendingReview_transitions_to_InReview()
+    {
+        var doc = CreateCompletedDocument(_tenantId);
+        doc.MarkPendingReview();
+        var reviewerId = UserId.New();
+
+        var result = doc.EnsureInReview(reviewerId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(DocumentStatus.InReview, doc.Status);
+        Assert.Equal(reviewerId, doc.ReviewedBy);
+    }
+
+    [Fact]
+    public void EnsureInReview_from_InReview_is_noop_and_succeeds()
+    {
+        var doc = CreateCompletedDocument(_tenantId);
+        doc.MarkPendingReview();
+        var originalReviewer = UserId.New();
+        doc.StartReview(originalReviewer);
+
+        var result = doc.EnsureInReview(UserId.New());
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(DocumentStatus.InReview, doc.Status);
+        Assert.Equal(originalReviewer, doc.ReviewedBy);
+    }
+
+    [Fact]
+    public void EnsureInReview_from_Submitted_fails()
+    {
+        var doc = IntakeDocument.Submit(_tenantId, "test.pdf", "storage/key");
+
+        var result = doc.EnsureInReview(UserId.New());
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("INVALID_TRANSITION", result.Error.Code);
+    }
+
+    // --- ResolveSubjectName ---
+
+    [Fact]
+    public void ResolveSubjectName_prefers_SubjectName_field()
+    {
+        var doc = CreateDocumentWithFields(
+            ("ReporterName", "Iven Smith"),
+            ("SubjectName", "Wasim Hanna"));
+
+        Assert.Equal("Wasim Hanna", doc.ResolveSubjectName());
+    }
+
+    [Fact]
+    public void ResolveSubjectName_prefers_ClientName_over_other_name_fields()
+    {
+        var doc = CreateDocumentWithFields(
+            ("ReporterName", "Iven Smith"),
+            ("ClientName", "Jane Doe"));
+
+        Assert.Equal("Jane Doe", doc.ResolveSubjectName());
+    }
+
+    [Fact]
+    public void ResolveSubjectName_falls_back_to_any_name_field()
+    {
+        var doc = CreateDocumentWithFields(
+            ("ReporterName", "Iven Smith"),
+            ("DateOfBirth", "1990-01-01"));
+
+        Assert.Equal("Iven Smith", doc.ResolveSubjectName());
+    }
+
+    [Fact]
+    public void ResolveSubjectName_returns_null_when_no_name_fields()
+    {
+        var doc = CreateDocumentWithFields(
+            ("DateOfBirth", "1990-01-01"),
+            ("Address", "123 Main St"));
+
+        Assert.Null(doc.ResolveSubjectName());
+    }
+
+    [Fact]
+    public void ResolveSubjectName_returns_null_for_blank_name()
+    {
+        var doc = CreateDocumentWithFields(("PatientName", "   "));
+
+        Assert.Null(doc.ResolveSubjectName());
+    }
+
+    [Fact]
+    public void ResolveSubjectName_uses_corrected_value_when_present()
+    {
+        var doc = CreateDocumentWithFields(("PatientName", "Jon Doe"));
+        doc.MarkPendingReview();
+        var reviewerId = UserId.New();
+        doc.StartReview(reviewerId);
+        doc.CorrectField("PatientName", "John Doe", reviewerId);
+
+        Assert.Equal("John Doe", doc.ResolveSubjectName());
     }
 
     // --- Finalize ---

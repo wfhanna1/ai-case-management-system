@@ -164,6 +164,45 @@ public sealed class IntakeDocument : AggregateRoot<DocumentId>
         return Result<Unit>.Success(Unit.Value);
     }
 
+    /// <summary>
+    /// Ensures the document is in InReview status. If PendingReview, auto-starts the review.
+    /// If already InReview, succeeds as a no-op (preserving the original reviewer).
+    /// </summary>
+    public Result<Unit> EnsureInReview(UserId reviewerId)
+    {
+        if (Status == DocumentStatus.InReview)
+            return Result<Unit>.Success(Unit.Value);
+
+        if (Status != DocumentStatus.PendingReview)
+            return Result<Unit>.Failure(new Error("INVALID_TRANSITION",
+                $"Cannot start review from {Status}."));
+
+        return StartReview(reviewerId);
+    }
+
+    /// <summary>
+    /// Resolves the subject name from extracted fields using priority:
+    /// SubjectName > ClientName > any field containing "Name".
+    /// Returns null if no name field exists or the value is blank.
+    /// </summary>
+    public string? ResolveSubjectName()
+    {
+        var nameFields = _extractedFields
+            .Where(f => f.Name.Contains("Name", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var nameField = nameFields
+            .FirstOrDefault(f => f.Name.Contains("Subject", StringComparison.OrdinalIgnoreCase))
+            ?? nameFields.FirstOrDefault(f => f.Name.Contains("Client", StringComparison.OrdinalIgnoreCase))
+            ?? nameFields.FirstOrDefault();
+
+        if (nameField is null)
+            return null;
+
+        var value = (nameField.CorrectedValue ?? nameField.Value).Trim();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
     public void AssignToCase(CaseId caseId)
     {
         ArgumentNullException.ThrowIfNull(caseId);

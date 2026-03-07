@@ -43,14 +43,15 @@ public sealed class FinalizeReviewHandler
             return Result<Unit>.Failure(new Error("NOT_FOUND", "Document not found."));
 
         var document = findResult.Value;
+        var wasPendingReview = document.Status == DocumentStatus.PendingReview;
 
-        // If document is still PendingReview, start the review first and record it.
-        if (document.Status == DocumentStatus.PendingReview)
+        // Ensure the document is in InReview state (auto-starts review if PendingReview).
+        var ensureResult = document.EnsureInReview(reviewerId);
+        if (ensureResult.IsFailure)
+            return Result<Unit>.Failure(ensureResult.Error);
+
+        if (wasPendingReview)
         {
-            var startResult = document.StartReview(reviewerId);
-            if (startResult.IsFailure)
-                return Result<Unit>.Failure(startResult.Error);
-
             var startAudit = AuditLogEntry.RecordReviewStarted(tid, did, reviewerId);
             var startAuditResult = await _auditLogRepository.SaveAsync(startAudit, ct);
             if (startAuditResult.IsFailure)
