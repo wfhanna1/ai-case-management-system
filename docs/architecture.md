@@ -71,6 +71,9 @@ graph TB
     API -.->|"OTLP"| TEMPO
     OCR -.->|"OTLP"| TEMPO
     RAG -.->|"OTLP"| TEMPO
+    API -.->|"Docker log driver"| LOKI
+    OCR -.->|"Docker log driver"| LOKI
+    RAG -.->|"Docker log driver"| LOKI
     PROM -.->|"Scrape /metrics"| API
 ```
 
