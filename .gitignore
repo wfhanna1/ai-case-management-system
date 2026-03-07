@@ -435,3 +435,12 @@ dist/
 
 # Git worktrees
 .worktrees/
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# Executed plan files
+docs/plans/
+
+# Playwright test artifacts
+src/ClientApp/e2e/test-upload.txt
