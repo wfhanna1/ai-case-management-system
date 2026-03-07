@@ -4,6 +4,28 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 
 ---
 
+## Planning and Backlog
+
+All development was done using **Claude Code** (Anthropic's CLI agent, powered by Claude Opus 4.6), extended with custom skill plugins and agentic workflows described in the Development Approach section below.
+
+After receiving the project requirements document, I uploaded it to Claude Code and used it to build a structured roadmap and backlog. Claude Code analyzed the requirements and broke the full project scope into nine phases:
+
+| Phase | Name |
+|-------|------|
+| 0 | Scaffolding |
+| 1 | Auth and Tenancy |
+| 2 | Templates |
+| 3 | Upload and OCR Pipeline |
+| 4 | Review Workflow |
+| 5 | Search and Cases |
+| 6 | RAG Pipeline |
+| 7 | Observability |
+| 8 | Documentation |
+
+I then created the backlog as GitHub Issues and organized them in a GitHub Project board to track progress across all phases.
+
+---
+
 ## Requirements Coverage
 
 | # | Requirement | Status | Notes |
@@ -178,26 +200,6 @@ Migrations run automatically when the API starts. This is convenient for develop
 ---
 
 ## Development Approach and AI Tool Usage
-
-All development was done using **Claude Code** (Anthropic's CLI agent, powered by Claude Opus 4.6), extended with custom skill plugins and agentic workflows described below.
-
-### Planning and backlog creation
-
-After receiving the project requirements document, I uploaded it to Claude Code and used it to build a structured roadmap and backlog. Claude Code analyzed the requirements and broke the full project scope into nine phases:
-
-| Phase | Name |
-|-------|------|
-| 0 | Scaffolding |
-| 1 | Auth and Tenancy |
-| 2 | Templates |
-| 3 | Upload and OCR Pipeline |
-| 4 | Review Workflow |
-| 5 | Search and Cases |
-| 6 | RAG Pipeline |
-| 7 | Observability |
-| 8 | Documentation |
-
-I then created the backlog as GitHub Issues and organized them in a GitHub Project board to track progress across all phases.
 
 ### Phased execution
 
