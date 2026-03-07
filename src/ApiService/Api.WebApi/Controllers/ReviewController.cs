@@ -121,18 +121,18 @@ public sealed class ReviewController : ControllerBase
     /// <response code="409">Document is not in a state that allows starting review.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpPost("{documentId:guid}/start")]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> StartReview(Guid documentId, CancellationToken ct)
     {
         var tenantId = _tenantContext.TenantId!.Value;
         var reviewerId = GetCurrentUserId();
         if (reviewerId is null)
-            return Unauthorized(ApiResponse<object>.Fail("MISSING_USER", "User identity is missing from token."));
+            return Unauthorized(ApiResponse<EmptyResponse>.Fail("MISSING_USER", "User identity is missing from token."));
 
         var result = await _startReviewHandler.HandleAsync(documentId, tenantId, reviewerId.Value, ct);
 
@@ -140,13 +140,13 @@ public sealed class ReviewController : ControllerBase
         {
             return result.Error.Code switch
             {
-                "NOT_FOUND" => NotFound(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                "INVALID_TRANSITION" => Conflict(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                _ => StatusCode(500, ApiResponse<object>.Fail(result.Error.Code, "An internal error occurred"))
+                "NOT_FOUND" => NotFound(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                "INVALID_TRANSITION" => Conflict(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                _ => StatusCode(500, ApiResponse<EmptyResponse>.Fail(result.Error.Code, "An internal error occurred"))
             };
         }
 
-        return Ok(ApiResponse<object>.Ok(new { }));
+        return Ok(ApiResponse<EmptyResponse>.Ok(new EmptyResponse()));
     }
 
     /// <summary>
@@ -164,13 +164,13 @@ public sealed class ReviewController : ControllerBase
     /// <response code="422">Request body failed validation.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpPost("{documentId:guid}/correct-field")]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CorrectField(
         Guid documentId,
         [FromBody] CorrectFieldRequest request,
@@ -179,7 +179,7 @@ public sealed class ReviewController : ControllerBase
         var tenantId = _tenantContext.TenantId!.Value;
         var reviewerId = GetCurrentUserId();
         if (reviewerId is null)
-            return Unauthorized(ApiResponse<object>.Fail("MISSING_USER", "User identity is missing from token."));
+            return Unauthorized(ApiResponse<EmptyResponse>.Fail("MISSING_USER", "User identity is missing from token."));
 
         var result = await _correctFieldHandler.HandleAsync(
             documentId, tenantId, reviewerId.Value, request.FieldName, request.NewValue, ct);
@@ -188,14 +188,14 @@ public sealed class ReviewController : ControllerBase
         {
             return result.Error.Code switch
             {
-                "NOT_FOUND" => NotFound(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                "FIELD_NOT_FOUND" => NotFound(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                "INVALID_TRANSITION" => Conflict(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                _ => StatusCode(500, ApiResponse<object>.Fail(result.Error.Code, "An internal error occurred"))
+                "NOT_FOUND" => NotFound(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                "FIELD_NOT_FOUND" => NotFound(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                "INVALID_TRANSITION" => Conflict(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                _ => StatusCode(500, ApiResponse<EmptyResponse>.Fail(result.Error.Code, "An internal error occurred"))
             };
         }
 
-        return Ok(ApiResponse<object>.Ok(new { }));
+        return Ok(ApiResponse<EmptyResponse>.Ok(new EmptyResponse()));
     }
 
     /// <summary>
@@ -211,18 +211,18 @@ public sealed class ReviewController : ControllerBase
     /// <response code="409">Document is not in a state that allows finalization.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpPost("{documentId:guid}/finalize")]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Finalize(Guid documentId, CancellationToken ct)
     {
         var tenantId = _tenantContext.TenantId!.Value;
         var reviewerId = GetCurrentUserId();
         if (reviewerId is null)
-            return Unauthorized(ApiResponse<object>.Fail("MISSING_USER", "User identity is missing from token."));
+            return Unauthorized(ApiResponse<EmptyResponse>.Fail("MISSING_USER", "User identity is missing from token."));
 
         var result = await _finalizeReviewHandler.HandleAsync(documentId, tenantId, reviewerId.Value, ct);
 
@@ -230,13 +230,13 @@ public sealed class ReviewController : ControllerBase
         {
             return result.Error.Code switch
             {
-                "NOT_FOUND" => NotFound(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                "INVALID_TRANSITION" => Conflict(ApiResponse<object>.Fail(result.Error.Code, result.Error.Message)),
-                _ => StatusCode(500, ApiResponse<object>.Fail(result.Error.Code, "An internal error occurred"))
+                "NOT_FOUND" => NotFound(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                "INVALID_TRANSITION" => Conflict(ApiResponse<EmptyResponse>.Fail(result.Error.Code, result.Error.Message)),
+                _ => StatusCode(500, ApiResponse<EmptyResponse>.Fail(result.Error.Code, "An internal error occurred"))
             };
         }
 
-        return Ok(ApiResponse<object>.Ok(new { }));
+        return Ok(ApiResponse<EmptyResponse>.Ok(new EmptyResponse()));
     }
 
     /// <summary>
