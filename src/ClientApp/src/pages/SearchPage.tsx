@@ -21,26 +21,12 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid2';
 import SearchIcon from '@mui/icons-material/Search';
 import { useDocumentSearch } from '@/hooks/useDocumentSearch';
+import { formatDate, STATUS_COLORS } from '@/utils/formatting';
 import type { DocumentDto } from '@/services/documentService';
 
 const STATUS_OPTIONS = [
   '', 'Submitted', 'Processing', 'Completed', 'Failed', 'PendingReview', 'InReview', 'Finalized',
 ];
-
-const STATUS_COLORS: Record<string, 'info' | 'warning' | 'success' | 'error'> = {
-  Submitted: 'info',
-  Processing: 'warning',
-  Completed: 'success',
-  Failed: 'error',
-  PendingReview: 'warning',
-  InReview: 'info',
-  Finalized: 'success',
-};
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-}
 
 function SearchPage() {
   const navigate = useNavigate();

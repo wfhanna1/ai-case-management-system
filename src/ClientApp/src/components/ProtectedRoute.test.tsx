@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { createElement } from 'react';
+import React, { createElement } from 'react';
 import ProtectedRoute from './ProtectedRoute';
 
 const mockAuthStore = vi.fn();
@@ -25,7 +25,7 @@ function renderWithRoute(
           path: '/protected',
           element: createElement(
             ProtectedRoute,
-            { requiredRole },
+            { requiredRole } as React.ComponentProps<typeof ProtectedRoute>,
             createElement('div', { 'data-testid': 'protected-content' }, 'Protected Content')
           ),
         }),

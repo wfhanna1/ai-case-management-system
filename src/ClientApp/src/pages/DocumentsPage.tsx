@@ -13,23 +13,9 @@ import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import { getDocuments, type DocumentDto } from '@/services/documentService';
+import { getDocuments } from '@/services/documentService';
 import useAuthStore from '@/stores/authStore';
-
-const STATUS_COLORS: Record<DocumentDto['status'], 'info' | 'warning' | 'success' | 'error'> = {
-  Submitted: 'info',
-  Processing: 'warning',
-  Completed: 'success',
-  Failed: 'error',
-  PendingReview: 'warning',
-  InReview: 'info',
-  Finalized: 'success',
-};
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-}
+import { formatDate, STATUS_COLORS } from '@/utils/formatting';
 
 function DocumentsPage() {
   const navigate = useNavigate();
