@@ -56,6 +56,8 @@ docker compose up --build
 
 First build takes a few minutes. Subsequent starts are faster due to layer caching.
 
+On first startup the RAG service downloads the `bge-micro-v2` embedding model (~23 MB) from Hugging Face. This is automatic and only happens once; the model is cached in the container image layer.
+
 ### 5. Verify
 
 Wait for all services to report healthy (about 30 seconds after initial build):

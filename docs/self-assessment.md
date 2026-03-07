@@ -66,7 +66,7 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 ## Missing Items
 
 ### Production Readiness
-- **Real embedding model.** MockEmbeddingAdapter generates deterministic vectors from SHA-256 hashes, not semantic embeddings. Needs OpenAI text-embedding-ada-002 or a local sentence-transformers model.
+- ~~**Real embedding model.**~~ Resolved. `LocalEmbeddingAdapter` uses SmartComponents `bge-micro-v2` model (384-dim, CPU-only, ~23MB). Runs inside the RagService process with no external dependencies. Configurable via `Embedding:Provider` (default: `local`, fallback: `mock`).
 - **Cloud file storage.** LocalFileStorageAdapter writes to the local filesystem. Needs Azure Blob Storage or S3 for production.
 - **LLM-based case summaries.** TemplateSummaryAdapter uses string templates. Needs an LLM to generate meaningful case narrative summaries.
 - **Rate limiting.** No rate limiting on API endpoints. Should add middleware or use a reverse proxy.
@@ -90,8 +90,8 @@ An honest evaluation of the Intake Document Processor system: what was built, wh
 
 ## Trade-offs
 
-### Mock adapters instead of real AI services
-The embedding adapter and case summary adapter are mocks. This was a deliberate choice to focus development time on the architecture, domain model, and integration patterns rather than on external API integration. The port/adapter pattern means swapping in real implementations requires only a new adapter class and a DI registration change, with no business logic changes.
+### Mock adapters for some AI services
+The case summary adapter (`TemplateSummaryAdapter`) is still a mock. The embedding adapter has been replaced with a real local model (`LocalEmbeddingAdapter` using SmartComponents bge-micro-v2). The port/adapter pattern means swapping in remaining real implementations requires only a new adapter class and a DI registration change, with no business logic changes.
 
 ### Single database for the API service
 All API data (documents, cases, users, templates, audit logs) lives in one PostgreSQL database. In a production multi-service architecture, you might split these into separate databases per bounded context. For this project, the single database simplifies development and deployment while the code-level separation (repositories, aggregates) keeps the boundaries clean.
