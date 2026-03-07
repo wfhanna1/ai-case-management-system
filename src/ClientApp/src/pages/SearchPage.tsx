@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -22,7 +20,8 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid2';
 import SearchIcon from '@mui/icons-material/Search';
-import { searchDocuments, type SearchDocumentsParams, type DocumentDto } from '@/services/documentService';
+import { useDocumentSearch } from '@/hooks/useDocumentSearch';
+import type { DocumentDto } from '@/services/documentService';
 
 const STATUS_OPTIONS = [
   '', 'Submitted', 'Processing', 'Completed', 'Failed', 'PendingReview', 'InReview', 'Finalized',
@@ -45,45 +44,31 @@ function formatDate(dateStr: string | null): string {
 
 function SearchPage() {
   const navigate = useNavigate();
-  const [fileName, setFileName] = useState('');
-  const [status, setStatus] = useState('');
-  const [fieldValue, setFieldValue] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
   const today = new Date().toISOString().split('T')[0];
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchTriggered, setSearchTriggered] = useState(false);
 
-  const params: SearchDocumentsParams = {
-    ...(fileName && { fileName }),
-    ...(status && { status }),
-    ...(fieldValue && { fieldValue }),
-    ...(fromDate && { from: new Date(fromDate).toISOString() }),
-    ...(toDate && { to: new Date(toDate + 'T23:59:59.999Z').toISOString() }),
-    page: page + 1,
-    pageSize,
-  };
+  const {
+    fileName, setFileName,
+    status, setStatus,
+    fieldValue, setFieldValue,
+    fromDate, setFromDate,
+    toDate, setToDate,
+    page, setPage,
+    pageSize, setPageSize,
+    searchTriggered,
+    handleSearch,
+    handleClear,
+    dateError,
+    data,
+    isLoading,
+    isError,
+    error,
+  } = useDocumentSearch();
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['searchDocuments', params],
-    queryFn: () => searchDocuments(params),
-    enabled: searchTriggered,
-  });
-
-  const handleSearch = () => {
-    setPage(0);
-    setSearchTriggered(true);
-  };
-
-  const handleClear = () => {
-    setFileName('');
-    setStatus('');
-    setFieldValue('');
-    setFromDate('');
-    setToDate('');
-    setPage(0);
-    setSearchTriggered(false);
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dateError) {
+      handleSearch();
+    }
   };
 
   return (
@@ -93,83 +78,88 @@ function SearchPage() {
       </Typography>
 
       <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <TextField
-              fullWidth
-              label="File Name"
-              value={fileName}
-              onChange={e => setFileName(e.target.value)}
-              data-testid="search-filename"
-              size="small"
-            />
+        <form onSubmit={onSubmit}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <TextField
+                fullWidth
+                label="File Name"
+                value={fileName}
+                onChange={e => setFileName(e.target.value)}
+                data-testid="search-filename"
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={status}
+                  label="Status"
+                  onChange={e => setStatus(e.target.value)}
+                  data-testid="search-status"
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {STATUS_OPTIONS.filter(Boolean).map(s => (
+                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <TextField
+                fullWidth
+                label="Field Value"
+                value={fieldValue}
+                onChange={e => setFieldValue(e.target.value)}
+                data-testid="search-fieldvalue"
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <TextField
+                fullWidth
+                type="date"
+                label="From"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                data-testid="search-from"
+                size="small"
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <TextField
+                fullWidth
+                type="date"
+                label="To"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                data-testid="search-to"
+                size="small"
+                error={!!dateError}
+                helperText={dateError}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 'auto' }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  data-testid="search-btn"
+                  startIcon={<SearchIcon />}
+                  disabled={!!dateError || isLoading}
+                >
+                  Search
+                </Button>
+                <Button variant="outlined" onClick={handleClear} data-testid="clear-btn">
+                  Clear
+                </Button>
+              </Box>
+            </Grid>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={status}
-                label="Status"
-                onChange={e => setStatus(e.target.value)}
-                data-testid="search-status"
-              >
-                <MenuItem value="">All</MenuItem>
-                {STATUS_OPTIONS.filter(Boolean).map(s => (
-                  <MenuItem key={s} value={s}>{s}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <TextField
-              fullWidth
-              label="Field Value"
-              value={fieldValue}
-              onChange={e => setFieldValue(e.target.value)}
-              data-testid="search-fieldvalue"
-              size="small"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <TextField
-              fullWidth
-              type="date"
-              label="From"
-              value={fromDate}
-              onChange={e => setFromDate(e.target.value)}
-              data-testid="search-from"
-              size="small"
-              slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <TextField
-              fullWidth
-              type="date"
-              label="To"
-              value={toDate}
-              onChange={e => setToDate(e.target.value)}
-              data-testid="search-to"
-              size="small"
-              slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 1 }}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                data-testid="search-btn"
-                startIcon={<SearchIcon />}
-              >
-                Search
-              </Button>
-              <Button variant="outlined" onClick={handleClear} data-testid="clear-btn">
-                Clear
-              </Button>
-            </Box>
-          </Grid>
-        </Grid>
+        </form>
       </Paper>
 
       {isError && (
@@ -178,80 +168,79 @@ function SearchPage() {
         </Alert>
       )}
 
-      <Paper elevation={2}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>File Name</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Submitted At</TableCell>
-                <TableCell>Processed At</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {isLoading ? (
+      {!searchTriggered ? (
+        <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
+          <Typography color="text.secondary" data-testid="search-prompt">
+            Use the filters above and click Search
+          </Typography>
+        </Paper>
+      ) : (
+        <Paper elevation={2}>
+          <TableContainer>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                    <CircularProgress />
-                  </TableCell>
+                  <TableCell>File Name</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Submitted At</TableCell>
+                  <TableCell>Processed At</TableCell>
                 </TableRow>
-              ) : data && data.items.length > 0 ? (
-                data.items.map((doc: DocumentDto) => (
-                  <TableRow
-                    key={doc.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/documents/${doc.id}`)}
-                    data-testid={`search-result-${doc.id}`}
-                  >
-                    <TableCell>{doc.originalFileName}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={doc.status}
-                        color={STATUS_COLORS[doc.status] || 'default'}
-                        size="small"
-                      />
+              </TableHead>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <CircularProgress />
                     </TableCell>
-                    <TableCell>{formatDate(doc.submittedAt)}</TableCell>
-                    <TableCell>{formatDate(doc.processedAt)}</TableCell>
                   </TableRow>
-                ))
-              ) : searchTriggered ? (
-                <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary" data-testid="no-results">
-                      No documents found
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary" data-testid="search-prompt">
-                      Use the filters above and click Search
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {data && data.totalCount > 0 && (
-          <TablePagination
-            component="div"
-            count={data.totalCount}
-            page={page}
-            onPageChange={(_, newPage) => setPage(newPage)}
-            rowsPerPage={pageSize}
-            onRowsPerPageChange={e => {
-              setPageSize(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            data-testid="search-pagination"
-          />
-        )}
-      </Paper>
+                ) : data && data.items.length > 0 ? (
+                  data.items.map((doc: DocumentDto) => (
+                    <TableRow
+                      key={doc.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/documents/${doc.id}`)}
+                      data-testid={`search-result-${doc.id}`}
+                    >
+                      <TableCell>{doc.originalFileName}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={doc.status}
+                          color={STATUS_COLORS[doc.status] || 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{formatDate(doc.submittedAt)}</TableCell>
+                      <TableCell>{formatDate(doc.processedAt)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary" data-testid="no-results">
+                        No documents found
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {data && data.totalCount > 0 && (
+            <TablePagination
+              component="div"
+              count={data.totalCount}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              rowsPerPage={pageSize}
+              onRowsPerPageChange={e => {
+                setPageSize(parseInt(e.target.value, 10));
+              }}
+              data-testid="search-pagination"
+            />
+          )}
+        </Paper>
+      )}
     </Box>
   );
 }
