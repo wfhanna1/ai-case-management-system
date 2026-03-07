@@ -156,6 +156,126 @@ public sealed class DocumentProcessedConsumerTests
         }
     }
 
+    [Fact]
+    public async Task DocumentProcessedConsumer_WithExtractedFields_PublishesEmbeddingRequestedEvent()
+    {
+        var tenantId = Guid.NewGuid();
+        var dbName = $"test-{Guid.NewGuid()}";
+
+        var tenantCtx = new RequestTenantContext();
+
+        await using var provider = new ServiceCollection()
+            .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
+            .AddSingleton<ITenantContext>(tenantCtx)
+            .AddDbContext<IntakeDbContext>(opts =>
+                opts.UseInMemoryDatabase(dbName))
+            .AddScoped<IDocumentRepository, EfDocumentRepository>()
+            .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
+            .AddScoped<ICaseRepository, StubCaseRepository>()
+            .AddScoped<AssignDocumentToCaseHandler>()
+            .AddMassTransitTestHarness(cfg =>
+            {
+                cfg.AddConsumer<DocumentProcessedConsumer>();
+            })
+            .BuildServiceProvider(true);
+
+        Guid documentId;
+        using (var scope = provider.CreateScope())
+        {
+            tenantCtx.SetTenant(new TenantId(tenantId));
+            var db = scope.ServiceProvider.GetRequiredService<IntakeDbContext>();
+            var doc = IntakeDocument.Submit(
+                new TenantId(tenantId), "test.pdf", "storage/test.pdf");
+            documentId = doc.Id.Value;
+            db.Documents.Add(doc);
+            await db.SaveChangesAsync();
+        }
+
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+
+        try
+        {
+            await harness.Bus.Publish(new DocumentProcessedEvent(
+                DocumentId: documentId,
+                TenantId: tenantId,
+                ExtractedFields: new Dictionary<string, ExtractedFieldResult>
+                {
+                    ["ReporterName"] = new("ReporterName", "Kevin Smith", 0.85),
+                    ["IncidentDescription"] = new("IncidentDescription", "something happened", 0.85)
+                },
+                ProcessedAt: DateTimeOffset.UtcNow));
+
+            Assert.True(await harness.Consumed.Any<DocumentProcessedEvent>());
+            Assert.True(await harness.Published.Any<EmbeddingRequestedEvent>());
+
+            var published = harness.Published.Select<EmbeddingRequestedEvent>().First();
+            Assert.Equal(documentId, published.Context.Message.DocumentId);
+            Assert.Equal(tenantId, published.Context.Message.TenantId);
+            Assert.Contains("Kevin Smith", published.Context.Message.TextContent);
+            Assert.Equal(2, published.Context.Message.FieldValues.Count);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task DocumentProcessedConsumer_WithNoFields_DoesNotPublishEmbeddingEvent()
+    {
+        var tenantId = Guid.NewGuid();
+        var dbName = $"test-{Guid.NewGuid()}";
+
+        var tenantCtx = new RequestTenantContext();
+
+        await using var provider = new ServiceCollection()
+            .AddLogging(b => b.AddProvider(NullLoggerProvider.Instance))
+            .AddSingleton<ITenantContext>(tenantCtx)
+            .AddDbContext<IntakeDbContext>(opts =>
+                opts.UseInMemoryDatabase(dbName))
+            .AddScoped<IDocumentRepository, EfDocumentRepository>()
+            .AddScoped<IAuditLogRepository, StubAuditLogRepository>()
+            .AddScoped<ICaseRepository, StubCaseRepository>()
+            .AddScoped<AssignDocumentToCaseHandler>()
+            .AddMassTransitTestHarness(cfg =>
+            {
+                cfg.AddConsumer<DocumentProcessedConsumer>();
+            })
+            .BuildServiceProvider(true);
+
+        Guid documentId;
+        using (var scope = provider.CreateScope())
+        {
+            tenantCtx.SetTenant(new TenantId(tenantId));
+            var db = scope.ServiceProvider.GetRequiredService<IntakeDbContext>();
+            var doc = IntakeDocument.Submit(
+                new TenantId(tenantId), "test.pdf", "storage/test.pdf");
+            documentId = doc.Id.Value;
+            db.Documents.Add(doc);
+            await db.SaveChangesAsync();
+        }
+
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+
+        try
+        {
+            await harness.Bus.Publish(new DocumentProcessedEvent(
+                DocumentId: documentId,
+                TenantId: tenantId,
+                ExtractedFields: new Dictionary<string, ExtractedFieldResult>(),
+                ProcessedAt: DateTimeOffset.UtcNow));
+
+            Assert.True(await harness.Consumed.Any<DocumentProcessedEvent>());
+            Assert.False(await harness.Published.Any<EmbeddingRequestedEvent>());
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+    }
+
     private sealed class StubCaseRepository : ICaseRepository
     {
         private readonly List<Case> _cases = [];
