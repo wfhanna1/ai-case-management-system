@@ -36,9 +36,15 @@ public sealed class AssignDocumentToCaseHandler
             return Result<Unit>.Failure(new Error("FORBIDDEN",
                 $"Document {documentId.Value} does not belong to tenant {tenantId.Value}."));
 
-        // Find the first extracted field whose name contains "Name" (case-insensitive).
-        var nameField = document.ExtractedFields
-            .FirstOrDefault(f => f.Name.Contains("Name", StringComparison.OrdinalIgnoreCase));
+        // Prefer "Subject" name fields for case assignment, then "Client", then any name field.
+        var nameFields = document.ExtractedFields
+            .Where(f => f.Name.Contains("Name", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var nameField = nameFields
+            .FirstOrDefault(f => f.Name.Contains("Subject", StringComparison.OrdinalIgnoreCase))
+            ?? nameFields.FirstOrDefault(f => f.Name.Contains("Client", StringComparison.OrdinalIgnoreCase))
+            ?? nameFields.FirstOrDefault();
 
         if (nameField is null)
         {

@@ -79,6 +79,34 @@ public sealed class AssignDocumentToCaseHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_PrefersSubjectName_OverOtherNameFields()
+    {
+        var doc = CreateDocumentWithMultipleNameFields(
+            ("ReporterName", "Iven Smith"),
+            ("SubjectName", "Wasim Hanna"));
+        _docRepo.Document = doc;
+
+        var result = await _handler.HandleAsync(doc.Id, Tenant);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Wasim Hanna", _caseRepo.SavedCase!.SubjectName);
+    }
+
+    [Fact]
+    public async Task HandleAsync_PrefersClientName_WhenNoSubjectField()
+    {
+        var doc = CreateDocumentWithMultipleNameFields(
+            ("ReporterName", "Iven Smith"),
+            ("ClientName", "Jane Doe"));
+        _docRepo.Document = doc;
+
+        var result = await _handler.HandleAsync(doc.Id, Tenant);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Jane Doe", _caseRepo.SavedCase!.SubjectName);
+    }
+
+    [Fact]
     public async Task HandleAsync_BlankNameField_SkipsAssignment()
     {
         var doc = CreateDocumentWithNameField("   ");
@@ -100,6 +128,16 @@ public sealed class AssignDocumentToCaseHandlerTests
         var doc = IntakeDocument.Submit(Tenant, "test.pdf", "storage/test.pdf");
         doc.MarkProcessing();
         var fields = new List<ExtractedField> { new(fieldName, fieldValue, 0.95) };
+        doc.MarkCompleted(fields);
+        doc.MarkPendingReview();
+        return doc;
+    }
+
+    private static IntakeDocument CreateDocumentWithMultipleNameFields(params (string Name, string Value)[] nameFields)
+    {
+        var doc = IntakeDocument.Submit(Tenant, "test.pdf", "storage/test.pdf");
+        doc.MarkProcessing();
+        var fields = nameFields.Select(f => new ExtractedField(f.Name, f.Value, 0.95)).ToList();
         doc.MarkCompleted(fields);
         doc.MarkPendingReview();
         return doc;
