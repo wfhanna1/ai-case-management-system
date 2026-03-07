@@ -2,7 +2,7 @@ using System.Reflection;
 using Messaging.Contracts.Events;
 using Messaging.Contracts.Models;
 using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+
 
 namespace Messaging.Tests.Contracts;
 
@@ -22,7 +22,6 @@ public sealed class AsyncApiContractTests
         var yaml = File.ReadAllText(yamlPath);
 
         var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         Spec = deserializer.Deserialize<Dictionary<object, object>>(yaml);

@@ -157,6 +157,10 @@ public sealed class SwaggerContractTests : IClassFixture<SwaggerContractTests.Te
         var schemasNotInSwagger = specSchemaNames.Except(swaggerSchemaNames).ToList();
         Assert.True(schemasNotInSwagger.Count == 0,
             $"Spec defines schemas missing from Swagger output:\n  {string.Join("\n  ", schemasNotInSwagger)}");
+
+        var schemasNotInSpec = swaggerSchemaNames.Except(specSchemaNames).ToList();
+        Assert.True(schemasNotInSpec.Count == 0,
+            $"Swagger output contains schemas not in spec:\n  {string.Join("\n  ", schemasNotInSpec)}");
     }
 
     private static string GetSolutionRoot()

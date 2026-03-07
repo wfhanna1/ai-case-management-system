@@ -53,6 +53,7 @@ channels:
           ack: true
 
   apiservice-embedding-completed:
+    x-status: planned
     description: >
       Channel for EmbeddingCompletedEvent. No consumer is wired yet; defined
       for future use.

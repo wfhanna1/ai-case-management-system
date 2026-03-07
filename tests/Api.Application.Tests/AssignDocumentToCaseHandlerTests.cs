@@ -107,6 +107,34 @@ public sealed class AssignDocumentToCaseHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_PrefersSubjectName_OverClientName()
+    {
+        var doc = CreateDocumentWithMultipleNameFields(
+            ("ClientName", "Jane Doe"),
+            ("SubjectName", "Wasim Hanna"));
+        _docRepo.Document = doc;
+
+        var result = await _handler.HandleAsync(doc.Id, Tenant);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Wasim Hanna", _caseRepo.SavedCase!.SubjectName);
+    }
+
+    [Fact]
+    public async Task HandleAsync_FallsBackToAnyNameField_WhenNoSubjectOrClient()
+    {
+        var doc = CreateDocumentWithMultipleNameFields(
+            ("ReporterName", "Iven Smith"),
+            ("DateOfBirth", "1990-01-01"));
+        _docRepo.Document = doc;
+
+        var result = await _handler.HandleAsync(doc.Id, Tenant);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Iven Smith", _caseRepo.SavedCase!.SubjectName);
+    }
+
+    [Fact]
     public async Task HandleAsync_BlankNameField_SkipsAssignment()
     {
         var doc = CreateDocumentWithNameField("   ");

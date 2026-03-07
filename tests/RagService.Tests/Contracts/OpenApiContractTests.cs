@@ -87,9 +87,22 @@ public sealed class OpenApiContractTests : IClassFixture<OpenApiContractTests.Te
             $"OpenAPI contract drift detected:\n{string.Join("\n", errors)}");
     }
 
+    [Fact]
+    public async Task Similar_Endpoint_Uses_Default_TopK_When_Omitted()
+    {
+        var docId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+
+        var response = await _client.GetAsync($"/api/similar?documentId={docId}&tenantId={tenantId}");
+
+        // Should NOT return 400 (topK validation failure).
+        // The handler may return 500 (no real Qdrant), but it should not reject missing topK.
+        Assert.NotEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static string GetSolutionRoot()
     {
-        var dir = Directory.GetCurrentDirectory();
+        var dir = AppContext.BaseDirectory;
         while (dir != null)
         {
             if (File.Exists(Path.Combine(dir, "IntakeDocumentProcessor.sln")))
