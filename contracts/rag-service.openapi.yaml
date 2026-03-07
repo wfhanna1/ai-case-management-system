@@ -4,6 +4,10 @@ info:
   version: v1
   description: Internal vector similarity search service for the AI Case Management System.
 
+servers:
+  - url: http://localhost:5002
+    description: Local development (Docker)
+
 paths:
   /api/similar:
     get:

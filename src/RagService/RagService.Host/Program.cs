@@ -140,16 +140,16 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 app.MapGet("/api/similar", async (
     Guid documentId,
     Guid tenantId,
-    int topK,
     SimilarDocumentsHandler handler,
-    CancellationToken ct) =>
+    CancellationToken ct,
+    int topK = 5) =>
 {
     if (topK is < 1 or > 50)
         return Results.BadRequest(new { error = "topK must be between 1 and 50." });
 
     var result = await handler.HandleAsync(documentId, tenantId, topK, ct);
     if (result.IsFailure)
-        return Results.Problem(result.Error.Message, statusCode: 500);
+        return Results.Problem("Failed to retrieve similar documents.", statusCode: 500);
 
     return Results.Ok(new { data = result.Value });
 });
@@ -164,7 +164,7 @@ app.MapPost("/api/similar-by-text", async (
 
     var result = await handler.HandleAsync(request.Text, request.TenantId, request.TopK, ct);
     if (result.IsFailure)
-        return Results.Problem(result.Error.Message, statusCode: 500);
+        return Results.Problem("Failed to retrieve similar documents.", statusCode: 500);
 
     return Results.Ok(new { data = result.Value });
 });

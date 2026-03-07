@@ -34,7 +34,7 @@ public sealed class AssignDocumentToCaseHandler
 
         if (document.TenantId != tenantId)
             return Result<Unit>.Failure(new Error("FORBIDDEN",
-                $"Document {documentId.Value} does not belong to tenant {tenantId.Value}."));
+                "Document does not belong to the specified tenant."));
 
         // Prefer "Subject" name fields for case assignment, then "Client", then any name field.
         var nameFields = document.ExtractedFields
@@ -70,11 +70,11 @@ public sealed class AssignDocumentToCaseHandler
         var @case = await FindOrCreateCaseAsync(document, subjectName, tenantId, ct);
         if (@case is null)
             return Result<Unit>.Failure(new Error("CASE_ASSIGNMENT_FAILED",
-                $"Failed to find or create case for subject '{subjectName}'."));
+                "Failed to find or create case for the document subject."));
 
         _logger.LogInformation(
-            "Document {DocumentId} assigned to case {CaseId} (subject: {SubjectName}).",
-            documentId.Value, @case.Id.Value, subjectName);
+            "Document {DocumentId} assigned to case {CaseId}.",
+            documentId.Value, @case.Id.Value);
 
         return Result<Unit>.Success(Unit.Value);
     }
@@ -106,7 +106,7 @@ public sealed class AssignDocumentToCaseHandler
         // Unique constraint violation: another consumer created this case concurrently.
         // Retry by finding the case they created.
         _logger.LogInformation(
-            "Case save conflict for subject '{SubjectName}'. Retrying find.", subjectName);
+            "Case save conflict for document {DocumentId}. Retrying find.", document.Id.Value);
 
         var retryFind = await _caseRepository.FindBySubjectNameAsync(subjectName, tenantId, ct);
         if (retryFind.IsFailure || retryFind.Value is null)
