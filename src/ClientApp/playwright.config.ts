@@ -19,10 +19,6 @@ export default defineConfig({
       testDir: './e2e/isolation',
     },
     {
-      name: 'pipeline',
-      testDir: './e2e/pipeline',
-    },
-    {
       name: 'e2e',
       testDir: './e2e',
       testIgnore: ['**/isolation/**', '**/pipeline/**'],

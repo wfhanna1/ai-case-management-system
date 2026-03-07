@@ -4,6 +4,7 @@ import {
   createReviewDocumentDto,
   createExtractedFieldDto,
   createAuditLogEntryDto,
+  apiOk,
 } from '../fixtures/mock-data';
 import {
   mockGetReviewDocument,
@@ -167,14 +168,17 @@ reviewerTest.describe('Review detail page (isolation)', () => {
     await mockFinalizeReview(reviewerPage, doc.id);
     await reviewerPage.goto(`/reviews/${doc.id}`);
 
+    // Mock pending reviews endpoint for post-finalize navigation
+    await reviewerPage.route('**/api/reviews/pending*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiOk({ items: [], totalCount: 0 })) })
+    );
+
     await reviewerPage.getByTestId('finalize-btn').click();
     await reviewerPage.getByTestId('confirm-finalize-btn').click();
 
-    // After finalize, mock the updated document
-    const finalizedDoc = { ...doc, status: 'Finalized' as const, reviewedAt: '2026-03-01T12:00:00Z' };
-    await mockGetReviewDocument(reviewerPage, finalizedDoc);
-
-    await expect(reviewerPage.getByText('This document has been finalized.')).toBeVisible({ timeout: 5000 });
+    // After finalize, app navigates to review queue
+    await reviewerPage.waitForURL('**/reviews', { timeout: 5000 });
+    await expect(reviewerPage.getByText('Review Queue')).toBeVisible();
   });
 
   reviewerTest('Audit log button opens drawer with entries', async ({ reviewerPage }) => {
