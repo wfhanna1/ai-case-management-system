@@ -551,31 +551,115 @@ Message contracts are the API boundary between services. Putting them in a share
 
 ## Testing Suite and Coverage
 
-### Test Projects
+### Testing Pyramid
 
-| Test Project | Scope | Test Count | What It Tests |
+The project implements a full testing pyramid. Each layer runs faster and covers more granular behavior than the one above it. Together they form a safety net that makes refactoring low-risk: change any layer of the system and the tests catch regressions before code reaches production.
+
+```
+         /  E2E (Playwright)  \          50 tests -- real browser, real backend
+        / Isolation (Playwright) \      100 tests -- real browser, mocked API
+       /   Integration (.NET)     \      39 tests -- real DB (SQLite), real DI
+      /     Unit (.NET + Vitest)    \  ~500 tests -- pure logic, no I/O
+```
+
+**Why this matters for refactoring.** The bottom of the pyramid (unit tests) pins down every domain invariant, handler behavior, and validation rule. Changing an aggregate's state machine or a handler's logic immediately breaks a targeted test that explains what went wrong. The middle layer (integration + isolation) confirms that adapters, repositories, and UI components still wire together correctly after a refactor. The top layer (E2E) validates that complete user workflows survive end-to-end. A developer can restructure internal code with confidence because all three layers must stay green before merging.
+
+### Backend Test Projects
+
+| Test Project | Layer | Count | What It Tests |
 |---|---|---|---|
 | `SharedKernel.Tests` | Unit | 42 | `Entity<T>`, `ValueObject`, `AggregateRoot<T>`, `Result<T>`, `TenantId`, `DomainEvent`, `AppMetrics`, `ServiceDiagnostics` |
 | `Api.Domain.Tests` | Unit | 66 | `IntakeDocument` state machine, `Case`, `User`, `FormTemplate`, `ExtractedField`, `AuditLogEntry`, `FormTemplateId` |
-| `Api.Application.Tests` | Unit | 111 | All command and query handlers: Submit, Review, Correct, Finalize, Login, Register, Search, Dashboard, RecentActivities, SimilarCases, AuditTrail |
+| `Api.Application.Tests` | Unit | 115 | All command and query handlers: Submit, Review, Correct, Finalize, Login, Register, Search, Dashboard, RecentActivities, SimilarCases, AuditTrail, AssignDocumentToCase (name field priority) |
 | `Api.Infrastructure.Tests` | Integration | 39 | EF Core repositories (in-memory SQLite), tenant isolation, cross-tenant isolation, `BcryptPasswordHasher`, `JwtTokenService`, `LocalFileStorageAdapter`, `HttpRagServiceClient`, `TemplateSummaryAdapter` |
-| `Api.WebApi.Tests` | Unit | 148 | Controllers (Auth, Documents, Cases, Review, FormTemplates), `TenantResolutionMiddleware`, `ValidationFilter`, all FluentValidation validators, `ApiResponse<T>`, Swagger contract tests |
-| `Messaging.Tests` | Unit | 23 | `MassTransitMessageBusAdapter`, all three consumers (`DocumentProcessedConsumer`, `DocumentUploadedConsumer`, `EmbeddingRequestedConsumer`), `TenantHeaderPublishFilter`, contract serialization |
+| `Api.WebApi.Tests` | Unit | 148 | Controllers (Auth, Documents, Cases, Review, FormTemplates), `TenantResolutionMiddleware`, `ValidationFilter`, all FluentValidation validators, `ApiResponse<T>`, OpenAPI contract drift tests (bidirectional) |
+| `Messaging.Tests` | Unit | 33 | `MassTransitMessageBusAdapter`, all three consumers (`DocumentProcessedConsumer`, `DocumentUploadedConsumer`, `EmbeddingRequestedConsumer`), `TenantHeaderPublishFilter`, AsyncAPI contract drift tests |
 | `OcrWorker.Tests` | Unit | 19 | `ProcessDocumentHandler`, `MockOcrAdapter`, `TesseractOcrAdapter`, `LocalFileStorageReadAdapter`, consumer log scopes |
-| `RagService.Tests` | Unit | 26 | `EmbedDocumentHandler`, `SimilarDocumentsHandler`, `FindSimilarByTextHandler`, `MockEmbeddingAdapter`, `EmbeddingRequestedConsumer`, `RagDataSeeder` |
-| **Frontend** (Vitest) | Unit | ~10 | Auth store (`authStore.test.ts`), utility functions (`index.test.ts`), JWT parsing (`jwt.test.ts`), validation (`validation.test.ts`) |
+| `RagService.Tests` | Unit + Integration | 29 | `EmbedDocumentHandler`, `SimilarDocumentsHandler`, `FindSimilarByTextHandler`, `MockEmbeddingAdapter`, `EmbeddingRequestedConsumer`, `RagDataSeeder`, OpenAPI contract drift tests, topK default validation |
 
-**Total backend tests**: ~486 `[Fact]` tests across 8 test projects.
+**Total backend tests**: ~491 across 8 test projects.
 
-### Testing Approach
+### Frontend Tests (Vitest)
+
+| Scope | Count | What It Tests |
+|---|---|---|
+| Unit | ~10 | Auth store (`authStore.test.ts`), utility functions (`index.test.ts`), JWT parsing (`jwt.test.ts`), validation (`validation.test.ts`) |
+
+### Playwright Test Suite
+
+Playwright provides the browser-level testing layers. The suite is split into two Playwright projects configured in `playwright.config.ts`, each serving a distinct purpose in the pyramid.
+
+#### Isolation Tests (100 tests, 20 spec files)
+
+Isolation tests run against a real browser with the Vite dev server, but **mock all API calls** using Playwright's `page.route()`. This makes them fast, deterministic, and independent of backend state. They verify that UI components render correctly, handle user interactions, and display API responses as expected.
+
+| Spec File | What It Tests |
+|---|---|
+| `dashboard-page.spec.ts` | Dashboard heading, stat cards, auth redirect |
+| `dashboard-stats.spec.ts` | Stat card values from mocked stats endpoint |
+| `dashboard-recent-activity.spec.ts` | Activity list rendering, empty state, API failure, data freshness on navigation |
+| `documents-page.spec.ts` | Document list rendering, status chips |
+| `documents-review.spec.ts` | Review button visibility based on document status |
+| `upload-page.spec.ts` | File upload form, success/error messages |
+| `review-queue-page.spec.ts` | Pending review list, pagination |
+| `review-detail-page.spec.ts` | Start review, correct field, finalize workflow |
+| `review-workflow.spec.ts` | Full review state transitions with mocked API |
+| `ocr-extracted-fields.spec.ts` | Extracted field display, confidence indicators, OCR status |
+| `document-preview.spec.ts` | Image/PDF preview rendering, error states |
+| `similar-cases-panel.spec.ts` | Similar cases list, scores, empty state |
+| `cases-page.spec.ts` | Case list rendering, search |
+| `case-detail-page.spec.ts` | Case detail with linked documents |
+| `search-page.spec.ts` | Search form, results rendering |
+| `login-page.spec.ts` | Login form rendering, validation |
+| `templates-page.spec.ts` | Template list, create form |
+| `template-printable.spec.ts` | Printable form rendering |
+| `navigation.spec.ts` | Responsive nav, mobile drawer |
+| `role-nav-visibility.spec.ts` | Role-based menu item visibility, route access control |
+
+Isolation tests use shared fixtures (`auth.fixture.ts`) to inject authentication state and shared helpers (`api-mocks.ts`) to set up route mocks with consistent mock data (`mock-data.ts`).
+
+#### E2E Tests (50 tests, 14 spec files)
+
+E2E tests run against the **full running stack** (frontend + API + database + RabbitMQ + OCR worker). They exercise complete user workflows from login through document processing, verifying that all services communicate correctly.
+
+| Spec File | What It Tests |
+|---|---|
+| `auth-flow.spec.ts` | Login, token storage, authenticated navigation, logout |
+| `registration.spec.ts` | User registration, duplicate email rejection |
+| `upload.spec.ts` | Document upload via real API, document appears in list |
+| `review-workflow.spec.ts` | Start review, correct fields, finalize (role-based access) |
+| `ocr-processing.spec.ts` | Upload triggers OCR pipeline, extracted fields appear |
+| `case-assignment.spec.ts` | Document assigned to case by subject name after OCR |
+| `dashboard-e2e.spec.ts` | Real stats from API, recent activity from audit log |
+| `templates.spec.ts` | Create template, verify in list |
+| `template-upload-flow.spec.ts` | View template, navigate to upload with template selected |
+| `template-printable-e2e.spec.ts` | Print-friendly template rendering |
+| `multi-tenant.spec.ts` | Tenant A cannot see tenant B data |
+| `validation.spec.ts` | Login/register form validation with real server errors |
+| `routing.spec.ts` | Root redirect, protected route behavior |
+| `bug77-repro.spec.ts` | Regression test: review status persists after finalize |
+
+### Why This Structure Enables Safe Refactoring
+
+The three test layers protect different aspects of the system during refactoring:
+
+**Unit tests** pin down business rules. If you refactor `IntakeDocument.MarkCompleted()` or change the name field priority logic in `AssignDocumentToCaseHandler`, the 66 domain tests and 115 handler tests catch any behavioral change immediately. These run in under a second, so you get instant feedback.
+
+**Integration and isolation tests** verify wiring. If you restructure a repository, change a controller's response shape, or refactor a React component's props, these tests catch the breakage at the boundary. Integration tests boot real EF Core with SQLite. Isolation tests render real React components with mocked API responses.
+
+**E2E tests** guard user workflows. If a refactor silently breaks the upload-to-review pipeline or the multi-tenant isolation, the E2E tests fail because they exercise the real stack. These are the slowest to run but catch the hardest-to-find bugs: race conditions between services, message bus misconfiguration, and authentication edge cases.
+
+**Contract drift tests** protect cross-service boundaries. The OpenAPI and AsyncAPI drift tests compare runtime Swagger output and C# message records against checked-in YAML specs. Any structural change to an API endpoint or message event that is not reflected in the spec (or vice versa) fails the build. This prevents silent contract breakage between independently deployed services.
+
+### Backend Testing Approach
 
 - **Framework**: xUnit with `[Fact]` assertions and `Assert.*` methods
 - **Test doubles**: Hand-written sealed inner classes implementing port interfaces. No Moq or other mocking frameworks.
 - **Logging**: `NullLogger<T>` for all tests that require an `ILogger<T>` parameter
-- **Naming convention**: Test methods use `snake_case` with descriptive names (e.g., `marks_document_completed_with_extracted_fields`)
+- **Naming convention**: Test methods use descriptive names (e.g., `HandleAsync_PrefersSubjectName_OverClientName`)
 - **Infrastructure tests**: Use EF Core's in-memory SQLite provider for repository tests, verifying tenant isolation and query filter behavior
 - **Messaging tests**: Verify consumer behavior by calling `Consume()` directly with constructed `ConsumeContext` wrappers, asserting on repository state changes and published messages
-- **Contract tests**: Verify that message contract records can round-trip through JSON serialization without data loss
+- **Contract drift tests**: Bidirectional comparison of runtime Swagger/reflection output against checked-in YAML specs. Any divergence fails the build.
 
 ### Coverage Areas
 
@@ -590,3 +674,9 @@ Message contracts are the API boundary between services. Putting them in a share
 - Middleware behavior (tenant resolution, authentication checks, exempt paths)
 - Message consumer processing (field mapping, status transitions, error handling)
 - Message contract serialization compatibility
+- OpenAPI and AsyncAPI contract drift detection
+- UI component rendering, user interactions, and API response handling (Playwright isolation)
+- Full user workflows across all services (Playwright E2E)
+- Multi-tenant data isolation at the browser level
+- Role-based access control and navigation visibility
+- Data freshness after navigation (staleTime behavior)
