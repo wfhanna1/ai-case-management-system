@@ -25,6 +25,7 @@ import WorkIcon from '@mui/icons-material/Work';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
 import useAuthStore from '@/stores/authStore';
+import queryClient from '@/queryClient';
 
 interface NavItem {
   label: string;
@@ -50,6 +51,7 @@ function MainLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleSignOut = () => {
+    queryClient.clear();
     clearAuth();
     navigate('/login');
   };
