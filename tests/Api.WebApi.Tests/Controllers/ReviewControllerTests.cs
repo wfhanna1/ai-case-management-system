@@ -31,7 +31,7 @@ public sealed class ReviewControllerTests
         var result = await controller.StartReview(Guid.NewGuid(), CancellationToken.None);
 
         var objectResult = Assert.IsType<UnauthorizedObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(objectResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(objectResult.Value);
         Assert.Equal("MISSING_USER", response.Error!.Code);
     }
 
@@ -45,7 +45,7 @@ public sealed class ReviewControllerTests
         var result = await controller.CorrectField(Guid.NewGuid(), request, CancellationToken.None);
 
         var objectResult = Assert.IsType<UnauthorizedObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(objectResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(objectResult.Value);
         Assert.Equal("MISSING_USER", response.Error!.Code);
     }
 
@@ -58,7 +58,7 @@ public sealed class ReviewControllerTests
         var result = await controller.Finalize(Guid.NewGuid(), CancellationToken.None);
 
         var objectResult = Assert.IsType<UnauthorizedObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(objectResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(objectResult.Value);
         Assert.Equal("MISSING_USER", response.Error!.Code);
     }
 
@@ -168,7 +168,7 @@ public sealed class ReviewControllerTests
         var result = await controller.StartReview(doc.Id.Value, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(okResult.Value);
         Assert.NotNull(response.Data);
         Assert.Null(response.Error);
     }
@@ -185,7 +185,7 @@ public sealed class ReviewControllerTests
         var result = await controller.StartReview(Guid.NewGuid(), CancellationToken.None);
 
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(notFoundResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(notFoundResult.Value);
         Assert.Equal("NOT_FOUND", response.Error!.Code);
     }
 
@@ -204,7 +204,7 @@ public sealed class ReviewControllerTests
         var result = await controller.StartReview(doc.Id.Value, CancellationToken.None);
 
         var conflictResult = Assert.IsType<ConflictObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(conflictResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(conflictResult.Value);
         Assert.Equal("INVALID_TRANSITION", response.Error!.Code);
     }
 
@@ -226,7 +226,7 @@ public sealed class ReviewControllerTests
         var result = await controller.CorrectField(doc.Id.Value, request, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(okResult.Value);
         Assert.NotNull(response.Data);
         Assert.Null(response.Error);
     }
@@ -244,7 +244,7 @@ public sealed class ReviewControllerTests
         var result = await controller.CorrectField(Guid.NewGuid(), request, CancellationToken.None);
 
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(notFoundResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(notFoundResult.Value);
         Assert.Equal("NOT_FOUND", response.Error!.Code);
     }
 
@@ -262,7 +262,7 @@ public sealed class ReviewControllerTests
         var result = await controller.CorrectField(doc.Id.Value, request, CancellationToken.None);
 
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(notFoundResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(notFoundResult.Value);
         Assert.Equal("FIELD_NOT_FOUND", response.Error!.Code);
     }
 
@@ -281,7 +281,7 @@ public sealed class ReviewControllerTests
         var result = await controller.CorrectField(doc.Id.Value, request, CancellationToken.None);
 
         var conflictResult = Assert.IsType<ConflictObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(conflictResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(conflictResult.Value);
         Assert.Equal("INVALID_TRANSITION", response.Error!.Code);
     }
 
@@ -302,7 +302,7 @@ public sealed class ReviewControllerTests
         var result = await controller.Finalize(doc.Id.Value, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(okResult.Value);
         Assert.NotNull(response.Data);
         Assert.Null(response.Error);
     }
@@ -319,7 +319,7 @@ public sealed class ReviewControllerTests
         var result = await controller.Finalize(Guid.NewGuid(), CancellationToken.None);
 
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(notFoundResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(notFoundResult.Value);
         Assert.Equal("NOT_FOUND", response.Error!.Code);
     }
 
@@ -337,7 +337,7 @@ public sealed class ReviewControllerTests
         var result = await controller.Finalize(doc.Id.Value, CancellationToken.None);
 
         var conflictResult = Assert.IsType<ConflictObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(conflictResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(conflictResult.Value);
         Assert.Equal("INVALID_TRANSITION", response.Error!.Code);
     }
 
@@ -354,7 +354,7 @@ public sealed class ReviewControllerTests
         var result = await controller.Finalize(doc.Id.Value, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+        var response = Assert.IsType<ApiResponse<EmptyResponse>>(okResult.Value);
         Assert.Null(response.Error);
     }
 

@@ -23,3 +23,9 @@ public sealed record ApiError(string Code, string Message)
 {
     public Dictionary<string, string[]>? Details { get; init; }
 }
+
+/// <summary>
+/// Empty data payload used as the generic type argument for action-only endpoints
+/// that return no meaningful data on success.
+/// </summary>
+public sealed record EmptyResponse;
