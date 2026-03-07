@@ -224,6 +224,12 @@ public sealed class DocumentsController : ControllerBase
         return Ok(ApiResponse<DashboardStatsDto>.Ok(result.Value));
     }
 
+    /// <summary>
+    /// Returns recent audit activity for the authenticated tenant.
+    /// </summary>
+    /// <param name="limit">Maximum number of entries to return (1-50, default 10).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A list of recent activity entries.</returns>
     [HttpGet("recent-activity")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<RecentActivityDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
