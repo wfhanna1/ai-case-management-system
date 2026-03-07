@@ -140,7 +140,7 @@ The API gateway and primary backend. Handles all REST endpoints for the frontend
 - **Audit trail**: Record and retrieve all actions taken on documents
 - **Dashboard**: Aggregate statistics (pending review count, processed today, average processing time)
 
-The API publishes `DocumentUploadedEvent` after storing an uploaded file and `EmbeddingRequestedEvent` when requesting vector indexing. It consumes `DocumentProcessedEvent` to update document status after OCR completes.
+The API publishes `DocumentUploadedEvent` after storing an uploaded file. It consumes `DocumentProcessedEvent` to update document status after OCR completes. The port interface `IMessageBusPort.PublishEmbeddingRequestedAsync` is defined and implemented but not yet called -- embedding requests are not automatically triggered after document processing in the current codebase.
 
 ### OcrWorkerService
 
@@ -354,12 +354,9 @@ sequenceDiagram
     RMQ->>API: Deliver to api-document-processed queue
     API->>API: Update document: Processing -> Completed -> PendingReview
     API->>API: Auto-assign to Case by subject name
-    API->>RMQ: Publish EmbeddingRequestedEvent
 
-    RMQ->>RAG: Deliver to rag-embedding-requested queue
-    RAG->>RAG: Generate embedding
-    RAG->>QD: Upsert vector
-    RAG->>RMQ: Publish EmbeddingCompletedEvent
+    Note over API,RAG: EmbeddingRequestedEvent publishing is defined<br/>but not yet wired in the current codebase.
+    Note over RAG,QD: RAG embedding flow is triggered<br/>independently via seeded data or direct API calls.
 ```
 
 ### Queue Configuration
@@ -389,7 +386,7 @@ All message contracts are defined in the shared `Messaging.Contracts` library as
 |---|---|---|---|
 | `DocumentUploadedEvent` | ApiService | OcrWorkerService | DocumentId, TenantId, FileName, StorageKey, TemplateId |
 | `DocumentProcessedEvent` | OcrWorkerService | ApiService | DocumentId, TenantId, ExtractedFields, ProcessedAt |
-| `EmbeddingRequestedEvent` | ApiService | RagService | DocumentId, TenantId, TextContent, FieldValues |
+| `EmbeddingRequestedEvent` | ApiService (defined, not yet wired) | RagService | DocumentId, TenantId, TextContent, FieldValues |
 | `EmbeddingCompletedEvent` | RagService | (not yet consumed) | DocumentId, TenantId, CompletedAt |
 
 ---
@@ -473,10 +470,10 @@ Message contracts are the API boundary between services. Putting them in a share
 |---|---|---|---|
 | `SharedKernel.Tests` | Unit | 42 | `Entity<T>`, `ValueObject`, `AggregateRoot<T>`, `Result<T>`, `TenantId`, `DomainEvent`, `AppMetrics`, `ServiceDiagnostics` |
 | `Api.Domain.Tests` | Unit | 66 | `IntakeDocument` state machine, `Case`, `User`, `FormTemplate`, `ExtractedField`, `AuditLogEntry`, `FormTemplateId` |
-| `Api.Application.Tests` | Unit | 106 | All command and query handlers: Submit, Review, Correct, Finalize, Login, Register, Search, Dashboard, SimilarCases, AuditTrail |
+| `Api.Application.Tests` | Unit | 103 | All command and query handlers: Submit, Review, Correct, Finalize, Login, Register, Search, Dashboard, SimilarCases, AuditTrail |
 | `Api.Infrastructure.Tests` | Integration | 39 | EF Core repositories (in-memory SQLite), tenant isolation, cross-tenant isolation, `BcryptPasswordHasher`, `JwtTokenService`, `LocalFileStorageAdapter`, `HttpRagServiceClient`, `TemplateSummaryAdapter` |
-| `Api.WebApi.Tests` | Unit | 88 | Controllers (Auth, Documents, Cases, Review, FormTemplates), `TenantResolutionMiddleware`, `ValidationFilter`, all FluentValidation validators, `ApiResponse<T>` |
-| `Messaging.Tests` | Unit | 21 | `MassTransitMessageBusAdapter`, all three consumers (`DocumentProcessedConsumer`, `DocumentUploadedConsumer`, `EmbeddingRequestedConsumer`), `TenantHeaderPublishFilter`, contract serialization |
+| `Api.WebApi.Tests` | Unit | 124 | Controllers (Auth, Documents, Cases, Review, FormTemplates), `TenantResolutionMiddleware`, `ValidationFilter`, all FluentValidation validators, `ApiResponse<T>`, Swagger contract tests |
+| `Messaging.Tests` | Unit | 23 | `MassTransitMessageBusAdapter`, all three consumers (`DocumentProcessedConsumer`, `DocumentUploadedConsumer`, `EmbeddingRequestedConsumer`), `TenantHeaderPublishFilter`, contract serialization |
 | `OcrWorker.Tests` | Unit | 19 | `ProcessDocumentHandler`, `MockOcrAdapter`, `TesseractOcrAdapter`, `LocalFileStorageReadAdapter`, consumer log scopes |
 | `RagService.Tests` | Unit | 26 | `EmbedDocumentHandler`, `SimilarDocumentsHandler`, `FindSimilarByTextHandler`, `MockEmbeddingAdapter`, `EmbeddingRequestedConsumer`, `RagDataSeeder` |
 | **Frontend** (Vitest) | Unit | ~10 | Auth store (`authStore.test.ts`), utility functions (`index.test.ts`), JWT parsing (`jwt.test.ts`), validation (`validation.test.ts`) |
