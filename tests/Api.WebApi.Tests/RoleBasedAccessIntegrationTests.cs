@@ -10,12 +10,29 @@ namespace Api.WebApi.Tests;
 /// These tests require `docker compose up` to be running with seeded demo data.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class RoleBasedAccessIntegrationTests
+public sealed class RoleBasedAccessIntegrationTests : IAsyncLifetime
 {
     private static readonly HttpClient Client = new()
     {
-        BaseAddress = new Uri("http://localhost:5003")
+        BaseAddress = new Uri("http://localhost:5003"),
+        Timeout = TimeSpan.FromSeconds(5)
     };
+
+    public async Task InitializeAsync()
+    {
+        try
+        {
+            await Client.GetAsync("/health");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            throw new InvalidOperationException(
+                "Integration tests require the API at http://localhost:5003. " +
+                "Run `docker compose up` first.", ex);
+        }
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     private static async Task<string> LoginAsync(string email, string password = "Demo123!")
     {
@@ -70,18 +87,26 @@ public sealed class RoleBasedAccessIntegrationTests
     }
 
     [Fact]
-    public async Task Cross_tenant_worker_cannot_see_other_tenant_cases()
+    public async Task Cross_tenant_worker_sees_different_cases_than_other_tenant()
     {
-        // worker@beta.demo should get 200 but see only Beta Hospital cases
-        var token = await LoginAsync("worker@beta.demo");
-        var response = await Client.SendAsync(AuthenticatedGet("/api/cases", token));
+        var alphaToken = await LoginAsync("worker@alpha.demo");
+        var betaToken = await LoginAsync("worker@beta.demo");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var alphaResponse = await Client.SendAsync(AuthenticatedGet("/api/cases", alphaToken));
+        var betaResponse = await Client.SendAsync(AuthenticatedGet("/api/cases", betaToken));
 
-        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var items = json.GetProperty("data").GetProperty("items");
-        // Beta Hospital has its own cases; verify none belong to Alpha Clinic
-        // by checking the response is valid (tenant isolation is enforced by EF global filters)
-        Assert.True(items.GetArrayLength() >= 0);
+        Assert.Equal(HttpStatusCode.OK, alphaResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, betaResponse.StatusCode);
+
+        var alphaJson = await alphaResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var betaJson = await betaResponse.Content.ReadFromJsonAsync<JsonElement>();
+
+        var alphaIds = alphaJson.GetProperty("data").GetProperty("items")
+            .EnumerateArray().Select(i => i.GetProperty("id").GetString()).ToHashSet();
+        var betaIds = betaJson.GetProperty("data").GetProperty("items")
+            .EnumerateArray().Select(i => i.GetProperty("id").GetString()).ToHashSet();
+
+        // Tenants must not share any case IDs
+        Assert.Empty(alphaIds.Intersect(betaIds));
     }
 }

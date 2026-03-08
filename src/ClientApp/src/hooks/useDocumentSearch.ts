@@ -77,7 +77,9 @@ export function useDocumentSearch(): UseDocumentSearchReturn {
     setFromDate('');
     setToDate('');
     setPageRaw(0);
+    setPageSizeRaw(20);
     setSearchTriggered(false);
+    setCommittedParams({ page: 1, pageSize: 20 });
     queryClient.removeQueries({ queryKey: ['searchDocuments'] });
   }, [queryClient]);
 
