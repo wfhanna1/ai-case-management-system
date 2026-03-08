@@ -59,7 +59,7 @@ docker plugin install grafana/loki-docker-driver:3.6.0-arm64 --alias loki --gran
 ### 4. Start all services
 
 ```bash
-docker compose up --build --watch
+docker compose up --build
 ```
 
 First build takes a few minutes. Subsequent starts are faster due to layer caching.
