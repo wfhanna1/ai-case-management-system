@@ -32,11 +32,11 @@ public sealed class SearchDocumentsRequestValidator : AbstractValidator<SearchDo
         });
 
         RuleFor(x => x.From)
-            .Must(d => d is null || d <= DateTimeOffset.UtcNow)
+            .Must(d => d is null || d.Value.Date <= DateTimeOffset.UtcNow.Date.AddDays(1))
             .WithMessage("'From' date cannot be in the future.");
 
         RuleFor(x => x.To)
-            .Must(d => d is null || d <= DateTimeOffset.UtcNow)
+            .Must(d => d is null || d.Value.Date <= DateTimeOffset.UtcNow.Date.AddDays(1))
             .WithMessage("'To' date cannot be in the future.");
 
         RuleFor(x => x)
