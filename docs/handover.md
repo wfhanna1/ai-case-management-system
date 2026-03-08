@@ -74,7 +74,10 @@ cp .env.example .env
 # Edit .env -- set passwords and JWT secret
 
 # 3. Install the Loki logging driver (one-time)
-docker plugin install grafana/loki-docker-driver:3.4.3 --alias loki --grant-all-permissions
+# Intel (amd64):
+docker plugin install grafana/loki-docker-driver:3.6.0 --alias loki --grant-all-permissions
+# Apple Silicon / ARM64:
+# docker plugin install grafana/loki-docker-driver:3.6.0-arm64 --alias loki --grant-all-permissions
 
 # 4. Start everything
 docker compose up --build

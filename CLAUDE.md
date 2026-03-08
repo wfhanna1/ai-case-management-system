@@ -35,7 +35,9 @@ docker compose up --build
 
 Services: API (:5003), Frontend (:3000), PostgreSQL (:5432), RabbitMQ (:5672/:15672), Qdrant (:6333/:6334), Grafana (:3001), Prometheus (:9090), Loki (:3100), Tempo (:3200).
 
-**Loki logging driver (first time):** `docker plugin install grafana/loki-docker-driver:3.4.3 --alias loki --grant-all-permissions`
+**Loki logging driver (first time):**
+- Intel (amd64): `docker plugin install grafana/loki-docker-driver:3.6.0 --alias loki --grant-all-permissions`
+- Apple Silicon / ARM64: `docker plugin install grafana/loki-docker-driver:3.6.0-arm64 --alias loki --grant-all-permissions`
 
 **Linux users:** Set `LOKI_DRIVER_URL=http://localhost:3100/loki/api/v1/push` in `.env` (the default `host.docker.internal` only resolves on Docker Desktop for macOS/Windows).
 
