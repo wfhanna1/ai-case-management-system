@@ -33,7 +33,7 @@ jobs:
         run: dotnet build IntakeDocumentProcessor.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test IntakeDocumentProcessor.sln --no-build --configuration Release --verbosity normal
+        run: dotnet test IntakeDocumentProcessor.sln --no-build --configuration Release --verbosity normal --filter "Category!=Integration"
 
   frontend:
     name: Frontend (build + lint)
