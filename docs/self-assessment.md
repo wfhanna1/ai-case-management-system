@@ -88,9 +88,9 @@ This phased approach provided a balance between moving quickly and maintaining c
 - **Frontend auth state** persisted via Zustand with localStorage, automatic token refresh on 401
 
 ### Document Upload Preview
-- **Upload preview panel** added to the document upload flow, allowing users to visually inspect files before submission. This feature was not part of the original requirements but was introduced to help visualize what the OCR microservice would receive and process
-- **Image and PDF rendering** directly in the browser so intake workers can confirm they are uploading the correct file, verify orientation and legibility, and catch issues (blurry scans, truncated pages, wrong document) before the file enters the OCR pipeline
-- **Motivation:** during development and testing of the OCR pipeline, it became clear that upload quality directly impacts extraction accuracy. Giving users a preview reduces failed or low-confidence extractions caused by poor-quality input, cutting down on unnecessary reprocessing and manual corrections during review
+- **Document preview panel** in the review detail page, displaying the original uploaded file (PDF or image) alongside the extracted fields. This feature was not part of the original requirements but was added to help visualize what the OCR microservice was seeing and processing
+- **Blob-based inline rendering** fetches the file via `GET /documents/{id}/file` and displays it in-browser — PDFs in an embedded iframe, images (PNG, JPEG, TIFF) as an `<img>` tag with CSS containment — with a loading spinner and error alert fallback
+- **Motivation:** during development of the OCR pipeline, reviewers needed to see the original document to understand why certain fields were extracted with low confidence and to verify corrections against the source material
 
 ### Frontend
 - **React 19 + TypeScript + Vite** SPA with MUI v6 components
