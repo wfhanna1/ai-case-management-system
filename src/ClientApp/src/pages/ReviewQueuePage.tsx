@@ -18,17 +18,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import { getPendingReviews, type ReviewDocumentDto } from '@/services/reviewService';
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-}
-
-const STATUS_COLORS: Record<string, 'info' | 'warning' | 'success' | 'error' | 'default'> = {
-  PendingReview: 'warning',
-  InReview: 'info',
-  Finalized: 'success',
-};
+import { formatDate, STATUS_COLORS } from '@/utils/formatting';
 
 function ReviewQueuePage() {
   const navigate = useNavigate();

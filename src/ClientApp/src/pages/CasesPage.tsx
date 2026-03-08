@@ -15,11 +15,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import { getCases } from '@/services/caseService';
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-}
+import { formatDate } from '@/utils/formatting';
 
 function CasesPage() {
   const navigate = useNavigate();

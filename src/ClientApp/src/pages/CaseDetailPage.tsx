@@ -17,21 +17,7 @@ import Grid from '@mui/material/Grid2';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getCase } from '@/services/caseService';
 import type { DocumentDto } from '@/services/documentService';
-
-const STATUS_COLORS: Record<string, 'info' | 'warning' | 'success' | 'error'> = {
-  Submitted: 'info',
-  Processing: 'warning',
-  Completed: 'success',
-  Failed: 'error',
-  PendingReview: 'warning',
-  InReview: 'info',
-  Finalized: 'success',
-};
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-}
+import { formatDate, STATUS_COLORS } from '@/utils/formatting';
 
 function CaseDetailPage() {
   const { id } = useParams<{ id: string }>();

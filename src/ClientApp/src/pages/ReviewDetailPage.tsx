@@ -49,21 +49,7 @@ import {
   type AuditLogEntryDto,
   type SimilarCaseDto,
 } from '@/services/reviewService';
-
-function confidenceColor(confidence: number): 'success' | 'warning' | 'error' {
-  if (confidence > 0.9) return 'success';
-  if (confidence >= 0.7) return 'warning';
-  return 'error';
-}
-
-function confidenceLabel(confidence: number): string {
-  return `${(confidence * 100).toFixed(0)}%`;
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-}
+import { formatDate, confidenceColor, confidenceLabel } from '@/utils/formatting';
 
 function ReviewDetailPage() {
   const { id } = useParams<{ id: string }>();

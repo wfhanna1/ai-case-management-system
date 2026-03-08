@@ -67,7 +67,17 @@ workerTest.describe('Navigation responsiveness', () => {
     await expect(page.getByTestId('mobile-drawer')).not.toBeVisible();
   });
 
-  workerTest('shows inline nav buttons on large screens', async ({ workerPage: page }) => {
+  workerTest('shows hamburger menu at 1000px (between md and lg)', async ({ workerPage: page }) => {
+    await mockDashboardApis(page);
+    await page.setViewportSize({ width: 1000, height: 800 });
+    await page.goto('/dashboard');
+
+    await expect(page.getByTestId('mobile-menu-btn')).toBeVisible();
+    const dashboardBtn = page.getByRole('button', { name: 'Dashboard' });
+    await expect(dashboardBtn).not.toBeVisible();
+  });
+
+  workerTest('shows inline nav buttons on large screens (>=1200px)', async ({ workerPage: page }) => {
     await mockDashboardApis(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/dashboard');

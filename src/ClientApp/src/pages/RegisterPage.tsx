@@ -12,6 +12,7 @@ import Link from '@mui/material/Link';
 import useAuthStore from '@/stores/authStore';
 import { register, DEMO_TENANTS } from '@/services/authService';
 import { parseJwt } from '@/utils/jwt';
+import { extractRoles } from '@/utils/claims';
 import { validateEmail, validatePassword } from '@/utils/validation';
 
 const DEFAULT_TENANT_ID = DEMO_TENANTS[0].id;
@@ -71,11 +72,7 @@ function RegisterPage() {
         return;
       }
       const claims = parseJwt(res.data.accessToken);
-      const roleClaim = claims.role
-        ?? claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
-      const roles = Array.isArray(roleClaim)
-        ? (roleClaim as string[])
-        : roleClaim ? [roleClaim as string] : [];
+      const roles = extractRoles(claims);
       setAuth(
         {
           id: res.data.userId,

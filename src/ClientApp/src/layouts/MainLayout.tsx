@@ -79,14 +79,14 @@ function MainLayout() {
               <IconButton
                 color="inherit"
                 onClick={() => setDrawerOpen(true)}
-                sx={{ display: { xs: 'flex', md: 'none' } }}
+                sx={{ display: { xs: 'flex', lg: 'none' } }}
                 data-testid="mobile-menu-btn"
               >
                 <MenuIcon />
               </IconButton>
 
               {/* Desktop inline nav */}
-              <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+              <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
                 {visibleNavItems.map(item => (
                   <Button
                     key={item.path}
