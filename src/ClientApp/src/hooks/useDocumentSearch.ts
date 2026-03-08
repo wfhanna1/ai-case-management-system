@@ -62,8 +62,8 @@ export function useDocumentSearch(): UseDocumentSearchReturn {
       ...(fileName && { fileName }),
       ...(status && { status }),
       ...(fieldValue && { fieldValue }),
-      ...(fromDate && { from: new Date(fromDate).toISOString() }),
-      ...(toDate && { to: new Date(toDate + 'T23:59:59.999Z').toISOString() }),
+      ...(fromDate && { from: new Date(fromDate + 'T00:00:00').toISOString() }),
+      ...(toDate && { to: new Date(toDate + 'T23:59:59.999').toISOString() }),
       page: 1,
       pageSize,
     };

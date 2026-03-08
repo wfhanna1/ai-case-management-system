@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, confidenceColor, confidenceLabel, STATUS_COLORS } from './formatting';
+import { formatDate, formatStatusLabel, confidenceColor, confidenceLabel, STATUS_COLORS } from './formatting';
 
 describe('formatDate', () => {
   it('returns dash for null', () => {
@@ -47,6 +47,20 @@ describe('confidenceLabel', () => {
     expect(confidenceLabel(1.0)).toBe('100%');
     expect(confidenceLabel(0.7)).toBe('70%');
     expect(confidenceLabel(0.123)).toBe('12%');
+  });
+});
+
+describe('formatStatusLabel', () => {
+  it('inserts space before uppercase letters in camelCase', () => {
+    expect(formatStatusLabel('PendingReview')).toBe('Pending Review');
+    expect(formatStatusLabel('InReview')).toBe('In Review');
+  });
+
+  it('leaves single-word statuses unchanged', () => {
+    expect(formatStatusLabel('Submitted')).toBe('Submitted');
+    expect(formatStatusLabel('Completed')).toBe('Completed');
+    expect(formatStatusLabel('Failed')).toBe('Failed');
+    expect(formatStatusLabel('Finalized')).toBe('Finalized');
   });
 });
 

@@ -22,3 +22,7 @@ export const STATUS_COLORS: Record<string, 'info' | 'warning' | 'success' | 'err
   InReview: 'info',
   Finalized: 'success',
 };
+
+export function formatStatusLabel(status: string): string {
+  return status.replace(/([a-z])([A-Z])/g, '$1 $2');
+}

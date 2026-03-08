@@ -112,8 +112,9 @@ workerTest.describe('SearchPage', () => {
       expect(capturedUrl).toBeTruthy();
     }).toPass({ timeout: 3000 });
 
-    // The To date should be end of day, not midnight
-    expect(capturedUrl).toContain('to=2026-03-06T23:59:59');
+    // The To date should be end of day in local time, converted to UTC ISO string
+    const expectedTo = new Date('2026-03-06T23:59:59.999').toISOString();
+    expect(capturedUrl).toContain(`to=${expectedTo}`);
   });
 
   workerTest('date inputs disallow future dates', async ({ workerPage: page }) => {

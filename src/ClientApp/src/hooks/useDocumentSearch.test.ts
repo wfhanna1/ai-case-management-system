@@ -221,7 +221,7 @@ describe('useDocumentSearch', () => {
     expect(result.current.committedParams.page).toBe(1);
   });
 
-  it('builds params with end-of-day for toDate', () => {
+  it('builds params with end-of-day for toDate in local time', () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useDocumentSearch(), { wrapper });
 
@@ -233,9 +233,11 @@ describe('useDocumentSearch', () => {
       result.current.handleSearch();
     });
 
-    // The committed params should include end-of-day time
+    // The committed params should include an ISO string derived from local end-of-day
+    // new Date('2026-03-06T23:59:59.999') is parsed as local time, then toISOString() converts to UTC
     const params = result.current.committedParams;
-    expect(params.to).toContain('2026-03-06T23:59:59');
+    const expected = new Date('2026-03-06T23:59:59.999').toISOString();
+    expect(params.to).toBe(expected);
   });
 
   it('date validation: returns error when fromDate is after toDate', () => {

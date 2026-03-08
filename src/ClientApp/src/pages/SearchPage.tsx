@@ -21,7 +21,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid2';
 import SearchIcon from '@mui/icons-material/Search';
 import { useDocumentSearch } from '@/hooks/useDocumentSearch';
-import { formatDate, STATUS_COLORS } from '@/utils/formatting';
+import { formatDate, formatStatusLabel, STATUS_COLORS } from '@/utils/formatting';
 import type { DocumentDto } from '@/services/documentService';
 
 const STATUS_OPTIONS = [
@@ -87,7 +87,7 @@ function SearchPage() {
                 >
                   <MenuItem value="">All</MenuItem>
                   {STATUS_OPTIONS.filter(Boolean).map(s => (
-                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                    <MenuItem key={s} value={s}>{formatStatusLabel(s)}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -139,7 +139,7 @@ function SearchPage() {
                 >
                   Search
                 </Button>
-                <Button variant="outlined" onClick={handleClear} data-testid="clear-btn">
+                <Button type="button" variant="outlined" onClick={handleClear} data-testid="clear-btn">
                   Clear
                 </Button>
               </Box>
@@ -191,7 +191,7 @@ function SearchPage() {
                       <TableCell>{doc.originalFileName}</TableCell>
                       <TableCell>
                         <Chip
-                          label={doc.status}
+                          label={formatStatusLabel(doc.status)}
                           color={STATUS_COLORS[doc.status] || 'default'}
                           size="small"
                         />
