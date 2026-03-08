@@ -7,7 +7,7 @@ import ReviewDetailPage from './ReviewDetailPage';
 
 const mockState = {
   isAuthenticated: true,
-  hasRole: vi.fn((_role: string) => false) as ReturnType<typeof vi.fn>,
+  hasRole: vi.fn(() => false) as ReturnType<typeof vi.fn>,
 };
 
 vi.mock('@/stores/authStore', () => ({
