@@ -229,7 +229,7 @@ Migrations run automatically when the API starts. This is convenient for develop
 
 - **Ralph Loop** (`/ralph-loop`): a recurring loop that runs a prompt or slash command on a configurable interval within the same session. This was used to continuously monitor test results, re-run builds, and catch regressions during active development without manual re-invocation.
 
-- **Enterprise Agent Team** (`/enterprise-agent-team`): a custom multi-agent plugin that spawns specialized teammate agents (backend engineer, frontend engineer, QA engineer, platform engineer, security reviewer, code reviewer, tech lead) to work on tasks in parallel. Each agent operates with scoped tool access and domain focus. For example, the backend engineer and frontend engineer could implement both sides of a new feature simultaneously, while the QA engineer wrote tests in parallel. A tech lead agent coordinated cross-cutting concerns.
+- **Enterprise Agent Team** (`/enterprise-agent-team`): a custom multi-agent plugin that spawns specialized teammate agents (backend engineer, frontend engineer, QA engineer, platform engineer, security reviewer, code reviewer, tech lead) to work on tasks in parallel. Each agent operates with scoped tool access and domain focus. For example, the backend engineer and frontend engineer could implement both sides of a new feature simultaneously, while the QA engineer wrote tests in parallel. A tech lead agent coordinated cross-cutting concerns. 
 
 These plugins, combined with the TDD skill and the accumulated test suite as a safety net, allowed later phases to move significantly faster. The trade-off was higher token consumption: parallel agents and recurring loops burn through context quickly, and the Enterprise Agent Team in particular consumed substantially more tokens per phase than single-agent development. The parallelization was worth it for throughput, but it required careful prompt design to avoid agents duplicating or conflicting with each other's work.
 
@@ -251,6 +251,8 @@ all tests pass" --max-iterations 20 --completion-promise "All stories and tasks 
 - "Run the full testing suite"
 
 - "Pull stories from the ready column, make sure to action all the tasks in the story before moving it to the done column, then commit, push and merge"
+
+- "Let's pull stories in the ready column. Make sure to use /tdd while developing and /code-review when done. Move stories to the appropriate column as you move through the development life cycle"
 
 ### What worked well
 - TDD enforcement caught bugs early and made refactoring safe
