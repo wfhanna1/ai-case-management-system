@@ -44,7 +44,7 @@ This phased approach provided a balance between moving quickly and maintaining c
 | 6 | RAG + Vector DB | Complete | Qdrant integrated, tenant-isolated, similar cases surfaced in review UI; real semantic embeddings via SmartComponents bge-micro-v2 |
 | 7 | Multi-Tenancy | Complete | Row-level isolation, JWT propagation, vector store filtering, message bus verification |
 | 8 | Observability and Resilience | Complete | Grafana/Prometheus/Loki/Tempo, OpenTelemetry tracing as correlation IDs, health checks, MassTransit retry policies |
-| 9 | Tests | Complete | 516 backend + 110 Vitest + 102 isolation + 53 E2E tests |
+| 9 | Tests | Complete | 521 backend + 110 Vitest + 102 isolation + 53 E2E tests |
 | 10 | Deliverables | Complete | Docker Compose, OpenAPI/AsyncAPI specs, architecture doc, README, self-assessment |
 
 ---
@@ -104,7 +104,7 @@ This phased approach provided a balance between moving quickly and maintaining c
 - **Health checks** on every service, used by Docker Compose for dependency ordering
 
 ### Testing
-- **516 .NET tests** across 9 test projects (unit, integration)
+- **521 .NET tests** across 9 test projects (unit, integration)
 - **110 Vitest unit tests** across 11 test files (hooks, components, stores, utilities, interceptors)
 - **102 Playwright isolation tests** (real browser, mocked API) across 20 spec files
 - **53 Playwright E2E tests** (real browser, full running stack) across 15 spec files
