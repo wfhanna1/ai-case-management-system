@@ -87,6 +87,11 @@ This phased approach provided a balance between moving quickly and maintaining c
 - **Role-based authorization** policies: RequireIntakeWorker, RequireReviewer, RequireAdmin
 - **Frontend auth state** persisted via Zustand with localStorage, automatic token refresh on 401
 
+### Document Upload Preview
+- **Upload preview panel** added to the document upload flow, allowing users to visually inspect files before submission. This feature was not part of the original requirements but was introduced to help visualize what the OCR microservice would receive and process
+- **Image and PDF rendering** directly in the browser so intake workers can confirm they are uploading the correct file, verify orientation and legibility, and catch issues (blurry scans, truncated pages, wrong document) before the file enters the OCR pipeline
+- **Motivation:** during development and testing of the OCR pipeline, it became clear that upload quality directly impacts extraction accuracy. Giving users a preview reduces failed or low-confidence extractions caused by poor-quality input, cutting down on unnecessary reprocessing and manual corrections during review
+
 ### Frontend
 - **React 19 + TypeScript + Vite** SPA with MUI v6 components
 - **React Query v5** for server state, **Zustand v5** for client state (auth)
