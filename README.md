@@ -42,9 +42,17 @@ Open `.env` and set passwords. At minimum, change `POSTGRES_PASSWORD` and `JWT_S
 
 ### 3. Install the Loki Docker logging driver (first time only)
 
+**Intel (amd64) / Windows (Docker Desktop):**
 ```bash
-docker plugin install grafana/loki-docker-driver:3.4.3 --alias loki --grant-all-permissions
+docker plugin install grafana/loki-docker-driver:3.6.0 --alias loki --grant-all-permissions
 ```
+
+**Apple Silicon / ARM64:**
+```bash
+docker plugin install grafana/loki-docker-driver:3.6.0-arm64 --alias loki --grant-all-permissions
+```
+
+**Windows note:** Docker Desktop for Windows runs a Linux VM, so the amd64 plugin works. Native Windows containers are not supported.
 
 **Linux users:** Set `LOKI_DRIVER_URL=http://localhost:3100/loki/api/v1/push` in `.env`. The default `host.docker.internal` only resolves on Docker Desktop (macOS/Windows).
 
