@@ -9,10 +9,11 @@ using SharedKernel;
 namespace Api.WebApi.Controllers;
 
 /// <summary>
-/// Manages the document review workflow. Requires the Reviewer or Admin role.
+/// Manages the document review workflow. Read endpoints are accessible to all authenticated
+/// users; mutation endpoints (start, correct-field, finalize) require the Reviewer or Admin role.
 /// </summary>
 [ApiController]
-[Authorize(Policy = "RequireReviewer")]
+[Authorize]
 [Route("api/reviews")]
 public sealed class ReviewController : ControllerBase
 {
@@ -57,6 +58,7 @@ public sealed class ReviewController : ControllerBase
     /// <response code="403">Caller does not have the Reviewer or Admin role.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpGet("pending")]
+    [Authorize(Policy = "RequireReviewer")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<ReviewDocumentDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -78,19 +80,18 @@ public sealed class ReviewController : ControllerBase
 
     /// <summary>
     /// Gets the review detail for a specific document, including extracted fields.
+    /// Accessible to all authenticated users.
     /// </summary>
     /// <param name="documentId">Document identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Review document with extracted field data.</returns>
     /// <response code="200">Review detail returned.</response>
     /// <response code="401">Not authenticated.</response>
-    /// <response code="403">Caller does not have the Reviewer or Admin role.</response>
     /// <response code="404">Document not found.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpGet("{documentId:guid}")]
     [ProducesResponseType(typeof(ApiResponse<ReviewDocumentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<ReviewDocumentDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<ReviewDocumentDto>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetReview(Guid documentId, CancellationToken ct)
@@ -121,6 +122,7 @@ public sealed class ReviewController : ControllerBase
     /// <response code="409">Document is not in a state that allows starting review.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpPost("{documentId:guid}/start")]
+    [Authorize(Policy = "RequireReviewer")]
     [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -164,6 +166,7 @@ public sealed class ReviewController : ControllerBase
     /// <response code="422">Request body failed validation.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpPost("{documentId:guid}/correct-field")]
+    [Authorize(Policy = "RequireReviewer")]
     [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -211,6 +214,7 @@ public sealed class ReviewController : ControllerBase
     /// <response code="409">Document is not in a state that allows finalization.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpPost("{documentId:guid}/finalize")]
+    [Authorize(Policy = "RequireReviewer")]
     [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<EmptyResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -241,18 +245,17 @@ public sealed class ReviewController : ControllerBase
 
     /// <summary>
     /// Returns the top 5 cases semantically similar to the given document, based on extracted field content.
+    /// Accessible to all authenticated users.
     /// </summary>
     /// <param name="documentId">Document identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>List of similar cases with similarity scores.</returns>
     /// <response code="200">Similar cases returned.</response>
     /// <response code="401">Not authenticated.</response>
-    /// <response code="403">Caller does not have the Reviewer or Admin role.</response>
     /// <response code="500">Failed to retrieve similar cases.</response>
     [HttpGet("{documentId:guid}/similar-cases")]
     [ProducesResponseType(typeof(ApiResponse<SimilarCasesResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<SimilarCasesResultDto>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetSimilarCases(Guid documentId, CancellationToken ct)
     {
@@ -268,18 +271,17 @@ public sealed class ReviewController : ControllerBase
 
     /// <summary>
     /// Returns the full audit trail for a document (all state transitions and field corrections).
+    /// Accessible to all authenticated users.
     /// </summary>
     /// <param name="documentId">Document identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Ordered list of audit log entries.</returns>
     /// <response code="200">Audit trail returned.</response>
     /// <response code="401">Not authenticated.</response>
-    /// <response code="403">Caller does not have the Reviewer or Admin role.</response>
     /// <response code="500">An unexpected error occurred.</response>
     [HttpGet("{documentId:guid}/audit")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<AuditLogEntryDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<AuditLogEntryDto>>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAuditTrail(Guid documentId, CancellationToken ct)
     {

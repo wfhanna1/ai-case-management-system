@@ -50,10 +50,12 @@ import {
   type SimilarCaseDto,
 } from '@/services/reviewService';
 import { formatDate, confidenceColor, confidenceLabel } from '@/utils/formatting';
+import useAuthStore from '@/stores/authStore';
 
 function ReviewDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const canReview = useAuthStore(s => s.hasRole('Reviewer') || s.hasRole('Admin'));
   const queryClient = useQueryClient();
 
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -170,6 +172,7 @@ function ReviewDetailPage() {
   }
 
   const isInReview = doc.status === 'InReview';
+  const canEdit = isInReview && canReview;
   const isFinalized = doc.status === 'Finalized';
 
   return (
@@ -208,7 +211,7 @@ function ReviewDetailPage() {
         </Alert>
       )}
 
-      {doc.status === 'PendingReview' && (
+      {doc.status === 'PendingReview' && canReview && (
         <Alert severity="info" sx={{ mb: 2 }}>
           This document is pending review.{' '}
           <Button
@@ -302,7 +305,7 @@ function ReviewDetailPage() {
                     <TableCell>Value</TableCell>
                     <TableCell>Confidence</TableCell>
                     <TableCell>Corrected</TableCell>
-                    {isInReview && <TableCell align="right">Edit</TableCell>}
+                    {canEdit && <TableCell align="right">Edit</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -350,7 +353,7 @@ function ReviewDetailPage() {
                             field.correctedValue ?? '-'
                           )}
                         </TableCell>
-                        {isInReview && editingField !== field.name && (
+                        {canEdit && editingField !== field.name && (
                           <TableCell align="right">
                             <IconButton
                               size="small"
@@ -361,14 +364,14 @@ function ReviewDetailPage() {
                             </IconButton>
                           </TableCell>
                         )}
-                        {isInReview && editingField === field.name && (
+                        {canEdit && editingField === field.name && (
                           <TableCell />
                         )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isInReview ? 5 : 4} align="center">
+                      <TableCell colSpan={canEdit ? 5 : 4} align="center">
                         <Typography color="text.secondary">No extracted fields</Typography>
                       </TableCell>
                     </TableRow>
@@ -464,7 +467,7 @@ function ReviewDetailPage() {
         </AccordionDetails>
       </Accordion>
 
-      {isInReview && (
+      {canEdit && (
         <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
           <Button
             variant="contained"

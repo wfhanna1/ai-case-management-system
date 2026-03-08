@@ -87,6 +87,66 @@ public sealed class RoleBasedAccessIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task IntakeWorker_can_read_review_detail()
+    {
+        var token = await LoginAsync("worker@alpha.demo");
+
+        // First get a document ID from the cases endpoint
+        var casesResponse = await Client.SendAsync(AuthenticatedGet("/api/cases", token));
+        var casesJson = await casesResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var items = casesJson.GetProperty("data").GetProperty("items");
+        if (items.GetArrayLength() == 0)
+        {
+            // No cases seeded; skip gracefully
+            return;
+        }
+
+        var caseId = items[0].GetProperty("id").GetString()!;
+        var caseResponse = await Client.SendAsync(AuthenticatedGet($"/api/cases/{caseId}", token));
+        var caseJson = await caseResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var docs = caseJson.GetProperty("data").GetProperty("documents");
+        if (docs.GetArrayLength() == 0)
+        {
+            return;
+        }
+
+        var docId = docs[0].GetProperty("id").GetString()!;
+        var reviewResponse = await Client.SendAsync(AuthenticatedGet($"/api/reviews/{docId}", token));
+
+        // IntakeWorker should be able to read review detail (not 403)
+        Assert.Equal(HttpStatusCode.OK, reviewResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task IntakeWorker_cannot_start_review()
+    {
+        var token = await LoginAsync("worker@alpha.demo");
+
+        // Use a random GUID -- we only care about the 403, not 404
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/reviews/{Guid.NewGuid()}/start");
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task IntakeWorker_cannot_finalize_review()
+    {
+        var token = await LoginAsync("worker@alpha.demo");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/reviews/{Guid.NewGuid()}/finalize");
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Cross_tenant_worker_sees_different_cases_than_other_tenant()
     {
         var alphaToken = await LoginAsync("worker@alpha.demo");

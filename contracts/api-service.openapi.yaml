@@ -599,7 +599,7 @@ paths:
   /api/reviews/{documentId}:
     get:
       tags: [Review]
-      summary: Gets the review detail for a specific document, including extracted fields.
+      summary: Gets the review detail for a specific document. Accessible to all authenticated users.
       operationId: Review_GetReview
       parameters:
         - name: documentId
@@ -617,8 +617,6 @@ paths:
                 $ref: '#/components/schemas/ReviewDocumentDtoApiResponse'
         '401':
           description: Not authenticated.
-        '403':
-          description: Caller does not have the Reviewer or Admin role.
         '404':
           description: Document not found.
           content:
@@ -785,7 +783,7 @@ paths:
   /api/reviews/{documentId}/similar-cases:
     get:
       tags: [Review]
-      summary: Returns the top 5 cases semantically similar to the given document.
+      summary: Returns the top 5 cases semantically similar to the given document. Accessible to all authenticated users.
       operationId: Review_GetSimilarCases
       parameters:
         - name: documentId
@@ -803,8 +801,6 @@ paths:
                 $ref: '#/components/schemas/SimilarCasesResultDtoApiResponse'
         '401':
           description: Not authenticated.
-        '403':
-          description: Caller does not have the Reviewer or Admin role.
         '500':
           description: Failed to retrieve similar cases.
           content:
@@ -815,7 +811,7 @@ paths:
   /api/reviews/{documentId}/audit:
     get:
       tags: [Review]
-      summary: Returns the full audit trail for a document.
+      summary: Returns the full audit trail for a document. Accessible to all authenticated users.
       operationId: Review_GetAuditTrail
       parameters:
         - name: documentId
@@ -833,8 +829,6 @@ paths:
                 $ref: '#/components/schemas/AuditLogEntryDtoIReadOnlyListApiResponse'
         '401':
           description: Not authenticated.
-        '403':
-          description: Caller does not have the Reviewer or Admin role.
         '500':
           description: An unexpected error occurred.
           content:
