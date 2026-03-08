@@ -9,7 +9,7 @@ const localStorageMock = {
   removeItem: vi.fn((key: string) => { delete store[key]; }),
   clear: vi.fn(() => { Object.keys(store).forEach(k => delete store[k]); }),
   get length() { return Object.keys(store).length; },
-  key: vi.fn((_: number) => null),
+  key: vi.fn(() => null),
 };
 
 vi.stubGlobal('localStorage', localStorageMock);
